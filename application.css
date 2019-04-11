@@ -1,4 +1,47 @@
-* {
-background-color: aqua;
-color: darkblue
+body {
+background-color:black;
+color: white;
+font-family: 'Courier New', Courier, monospace;
+}
+
+header {
+    display: flex;
+    justify-content: center;
+}
+
+#data-container {
+      display: flex;
+      justify-content: center;
+}
+
+svg {
+    width: 60em;
+    height: 40em;
+    background-color: aquamarine
+}
+
+svg > rect {
+    background-color: aquamarine
+}
+
+table {
+    color: black;
+    background-color: white;
+    width: 20em;
+    height: 40em;
+    margin-right: 2em;
+    margin-left: 1em;
+    display: flex
+}
+
+tbody {
+    width: 100%;
+    display: flex
+}
+
+tr#heading-row {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    justify-items: center
 }
