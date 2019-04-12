@@ -12,15 +12,12 @@ header {
 #data-container {
       display: flex;
       justify-content: center;
+      height: 70vh
 }
 
-svg {
+#map {
     width: 60em;
-    height: 40em;
-    background-color: aquamarine
-}
-
-svg > rect {
+    height: 100%;
     background-color: aquamarine
 }
 
@@ -28,7 +25,7 @@ table {
     color: black;
     background-color: white;
     width: 20em;
-    height: 40em;
+    height: 100%;
     margin-right: 2em;
     margin-left: 1em;
     display: flex

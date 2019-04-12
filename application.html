@@ -4,6 +4,8 @@
 <html>
     <head>
         <title>DataMapper</title>
+        <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.1/mapbox-gl.js'></script>
+        <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.1/mapbox-gl.css' rel='stylesheet' />    
         <link rel="stylesheet" type="text/css" href ="application.css">
     </head>
 
@@ -12,14 +14,18 @@
         <h1>Data Mapper</h1>
         </header>
         <div id="data-container">
-        <svg></svg>
+        <!-- <canvas class="map"></canvas> -->
+        <!-- <svg class="map"></svg> -->
+        <div id='map'></div>
         <table id="main-table">
             <tr id="heading-row">
                 <th id="table-title">Total</th>
             </tr>
         </table>
         </div>
-        <script src="https://d3js.org/d3.v4.min.js"></script>
+        <script src="https://d3js.org/d3.v5.js"></script>
+        <script src="https://d3js.org/d3-array.v1.min.js"></script>
+        <script src="https://d3js.org/d3-geo.v1.min.js"></script>
     </body>
     <script src="datamapper.js"></script> 
 </html>
