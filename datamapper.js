@@ -62,13 +62,41 @@ zoom: 10
 var hoveredId = null
 
 map.on('load', function() {
-    
-    });
-
-map.on("mousemove", function(e) {
-    if (e.features.length > 0) {
-        if (hoveredId) {
-            map.setFeatureState()
+    map.addLayer({
+        "id": "Election District",
+        "type": 'fill',
+        "source": {
+            type: 'vector',
+            url: 'mapbox://samhudis.5jrmia73'
+        },
+        "source-layer": "pa_eds_lite-a0qgzr",
+        "paint": {
+            "fill-color": ["case", ["boolean", ["feature-state", "hover"], false],
+            "#000000",
+            "#ffffff"],
+            "fill-opacity": 0.7,
         }
-    }
+    }, "road-label"
+    )
+    // map.addSource('Election District', {
+    //     "type": "geojson",
+    //     "data": "./election_districts.geo.json"
+    //     });
+
+    map.on("mousemove", "Election District", function(e) {
+        if (e.features.length > 0) {
+            if (hoveredId) {
+                map.setFeatureState({sourceLayer: "pa_eds_lite-a0qgzr", source: 'Election District', id: hoveredId}, { hover: false});
+            }
+            hoveredId = e.features[0].id;
+            map.setFeatureState({sourceLayer: "pa_eds_lite-a0qgzr", source: 'Election District', id: hoveredId},{ hover: true});
+        }
+    })
+
+    map.on("mouseleave", "Election District", function() {
+        if (hoveredId) {
+            map.setFeatureState({sourceLayer: "pa_eds_lite-a0qgzr", source: 'Election District', id: hoveredId}, { hover: false});
+        }
+        hoveredId = null;
+    })
 })
