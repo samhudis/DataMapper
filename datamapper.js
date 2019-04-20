@@ -1,67 +1,52 @@
-// d3.json('public_advocate.geo.json', function(error, mapData) {
-//     var features = mapData.features;
-// })
-
-// svg.append("path")
-//     .datum({type: "FeatureCollection", features: features})
-//     .attr("d", d3.geoPath());
-
-
-// d3.selectAll("h1").style("color","red");
-
-// const canvas = d3.select("canvas")
-// const ctx = canvas.getContext("2d")
-
-// d3.json('public_advocate.geo.json', function(error, mapData) {
-//     var features = mapData.features;
-
-//     map.data(features)
-//     .enter().append
-
-
-// })
-
-// document.addEventListener("DOMContentLoaded", () => {
-//     let width = 700;
-//     let height = 500;
-//     let svg = d3.select("svg").attr("preserveAspectRatio", "xMinYMin meet")
-//         .attr("viewbox", "0 0" + width + " " + height)
-
-
-//     let projection = d3.geoEquirectangular()
-//     .translate([width/2, height/2]).scale(69000).center([-73.985974, 40.712776]);
-
-//     let path = d3.geoPath().projection(projection)
-
-//     let edMap = d3.json("public_advocate.geo.json");
-
-//     edMap.then((data) => {
-//         svg.selectAll("path")
-//         .data(data.features)
-//         // console.log(data.features)
-//         .enter()
-//         .append("path")
-//         .attr("id", (d) => (d.properties.combined_w))
-//         .attr("d", path);
-//         // .exit()
-//         console.log("completed!");
-//     });
-
-    
-// })
-
-
-
+let ED = {};
+const ElectDistJSON = jQuery.getJSON('./gis_temp/pa_eds_lite.geo.json').then((responseJSON) => {
+const features = responseJSON.features;
+for (let i=0; i < features.length; i++) {
+    let ed = features[i].properties.ed;
+    ED[ed] = features[i];
+}
+})
 mapboxgl.accessToken = 'pk.eyJ1Ijoic2FtaHVkaXMiLCJhIjoiY2pudzdwZTIyMDA2dTN2bWVtY3Q1Znc5NSJ9.KKMNkGea2HILNgmDRDDj9Q';
 var map = new mapboxgl.Map({
 container: 'map',
 style: 'mapbox://styles/samhudis/cjuefwyqu1o5j1fnrju4ywcgq',
-center: [-74,40.75],
-zoom: 10
+center: [-73.97875695,40.70545215],
+zoom: 9
 });
-var hoveredId = null
+let hoveredId = null;
+let currentED = null;
+const inSourceLayer = "pa_eds_lite-a0qgzr";
+
+const zoomTo = function(map, featureArr) {
+    let n = -100;
+    let s = 100;
+    let e = 200;
+    let w = -200;
+    for (let i=0; i < featureArr.length; i++) {
+        // let ed = featureArr[i].ed;
+        let bounds = turf.envelope(featureArr[i]).geometry.coordinates[0];
+        for (let i=0; i < bounds.length; i++) {
+            let corner = bounds[i]
+                if (corner[1] > n) {n = corner[1]}
+                if (corner[1] < s) {s = corner[1]}
+                if (corner[0] < e) {e = corner[0]}
+                if (corner[0] > w) {w = corner[0]}
+        }
+    }
+    map.fitBounds([[w,s],[e,n]], {padding: 25, linear: false})
+}
+
+const zoomToED = function(map, ed) {
+    let features = [ED[ed]]
+    zoomTo(map, features)
+}
+
+const zoomToCity = function(map) {
+    map.fitBounds([[-74.2556845,40.4955504],[-73.7018294,40.9153539]], {padding: 5})
+}
 
 map.on('load', function() {
+    zoomToCity(map)
     map.addLayer({
         "id": "Election District",
         "type": 'fill',
@@ -69,11 +54,12 @@ map.on('load', function() {
             type: 'vector',
             url: 'mapbox://samhudis.5jrmia73'
         },
-        "source-layer": "pa_eds_lite-a0qgzr",
+        "source-layer": inSourceLayer,
         "paint": {
-            "fill-color": ["case", ["boolean", ["feature-state", "hover"], false],
-            "#000000",
-            "#ffffff"],
+            // "fill-color": ["case", ["boolean", ["feature-state", "hover"], false],
+            // "#000000",
+            // "#ffffff"],
+            "fill-color": "#ffffff",
             "fill-opacity": 0.7,
         }
     }, "road-label"
@@ -82,21 +68,59 @@ map.on('load', function() {
     //     "type": "geojson",
     //     "data": "./election_districts.geo.json"
     //     });
+    // debugger
 
+    map.addLayer({
+        "id": "Election District Border",
+        "type": 'line',
+        "source": {
+            type: 'vector',
+            url: 'mapbox://samhudis.5jrmia73'
+        },
+        "source-layer": inSourceLayer,
+        "paint": {
+            // "line-color": ["case", ["boolean", ["feature-state", "hover"], false],
+            // "#000000",
+            // "#ffffff"],
+            "line-color": "#000000",
+            "line-width": 2,
+            "line-opacity": ["case", ["boolean", ["feature-state","hover"], false],
+            1,
+            0]
+        }
+    }, "road-label")
+
+    // const EDs = map.querySourceFeatures("Election District", {'sourceLayer': inSourceLayer});
+    // const features = map.queryRenderedFeatures();
+    // debugger
+    // zoomTo(features)
+    // map.flyto(turf.center(map.getLayer("Election District")))
+    
     map.on("mousemove", "Election District", function(e) {
         if (e.features.length > 0) {
             if (hoveredId) {
-                map.setFeatureState({sourceLayer: "pa_eds_lite-a0qgzr", source: 'Election District', id: hoveredId}, { hover: false});
+                map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District Border', id: hoveredId}
+                , { hover: false});
             }
             hoveredId = e.features[0].id;
-            map.setFeatureState({sourceLayer: "pa_eds_lite-a0qgzr", source: 'Election District', id: hoveredId},{ hover: true});
+            currentED = e.features[0].properties.ed;
+            d3.select("#table-title").text("ED "+currentED)
+            map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District Border', id: hoveredId},{ hover: true});
         }
     })
 
     map.on("mouseleave", "Election District", function() {
         if (hoveredId) {
-            map.setFeatureState({sourceLayer: "pa_eds_lite-a0qgzr", source: 'Election District', id: hoveredId}, { hover: false});
+            map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District Border', id: hoveredId}, { hover: false});
         }
         hoveredId = null;
+        currentED = null;
+        d3.select("#table-title").text("Total")
     })
+
+    map.on('click', 'Election District', function (e) {
+        // map.jumpTo({zoom: 12});
+        zoomToED(map, e.features[0].properties.ed);
+
+        });
 })
