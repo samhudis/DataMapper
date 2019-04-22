@@ -2,7 +2,7 @@
 <meta charset="utf-8">
 <html>
     <head>
-        <title>DataMapper</title>
+        <title>Data Mapper</title>
         <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.1/mapbox-gl.js'></script>
         <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.53.1/mapbox-gl.css' rel='stylesheet' />    
         <link rel="stylesheet" type="text/css" href ="application.css">
@@ -10,13 +10,18 @@
 
     <body>
         <header>
-        <h1>Data Mapper</h1>
+        <h1>NYC Public Advocate Election Results, February 26th, 2019</h1>
         </header>
         <div id="data-container">
         <div id='map'></div>
         <table id="main-table">
-            <tr id="heading-row">
+            <tr id="title-row">
                 <th id="table-title">Total</th>
+            </tr>
+            <tr id="heading-row">
+                <td>Candidate</td>
+                <td>Percent</td>
+                <td>Votes</td>
             </tr>
         </table>
         </div>

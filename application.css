@@ -45,10 +45,15 @@ tr {
     justify-content: space-between
 }
 
-tr#heading-row {
+tr#title-row {
     display: flex;
     justify-content: center;
-    justify-items: center
+    justify-items: center;
+    font-weight: bold
+}
+
+tr#heading-row {
+    font-weight: bold
 }
 
 /* .data-row {
@@ -59,7 +64,13 @@ tr#heading-row {
 
 td {
     font-size: 8pt;
-    margin: 1.5%;
+    /* font-size: auto */
+    margin-right: 1.5%;
+    margin-left: 1.5%;
+}
+
+tr#heading-row > td {
+    font-size: 10pt
 }
 
 #total-row {
