@@ -14,7 +14,7 @@ let totalVotes = 0;
 let candidates = [];
 $.ajax({
     type: "GET",
-    url: "Public_advocate.csv",
+    url: "./Public_advocate.csv",
     dataType: "text",
     success: function(response) {loadCSV(response)}
 })
