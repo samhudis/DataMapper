@@ -74,6 +74,7 @@ tr#heading-row > td {
 }
 
 #total-row {
+    font-weight: bold
 }
 
 #values {

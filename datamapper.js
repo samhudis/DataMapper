@@ -1,5 +1,8 @@
 let ED = {};
 let EDLastClicked = 0;
+let legend = []
+// let legend = [[23001, 65001], '#000000',
+// 23002, '#000100'];
 const ElectDistJSON = jQuery.getJSON('./gis_temp/pa_eds_lite.geo.json').then((responseJSON) => {
 const features = responseJSON.features;
 for (let i=0; i < features.length; i++) {
@@ -12,6 +15,8 @@ let columns = [];
 let total = {};
 let totalVotes = 0;
 let candidates = [];
+let rank = {};
+
 $.ajax({
     type: "GET",
     url: "./Public_Advocate.csv",
@@ -38,6 +43,8 @@ function loadCSV(csv) {
         let row = {}
         for (let j=0; j<columns.length;j++) {
             row[columns[j]] = rowArr[j]
+            if ((rowArr[j] !== undefined) && (rowArr[j].indexOf("\r") !== -1)) {
+                row[columns[j]] = row[columns[j]].split("\r")[0]}
             if (!(isNaN(Number(row[columns[j]])))) {
                 total[columns[j]] += Number(row[columns[j]])
   
@@ -46,30 +53,44 @@ function loadCSV(csv) {
         let ed = rowArr[0];
         data[ed] = row;
     }
-    // for (let i=0; i<columns.length; i++) {
-    //     totals
-    //     for (let j=0; j<data.keys.length; j++) {
+    let candidateKeys = Object.keys(total)
+    for (let i=1; i<candidateKeys.length; i++) {
+        rank[total[candidateKeys[i]]] = candidateKeys[i].replace("__"," ")
+    }
 
-    //     }
-    // }
+    let candidatesUnsorted = [];
     let table = d3.select("tbody")
     for (let i=0; i<columns.length; i++) {
         let column = columns[i]
-        if (!(column.indexOf("(") === -1)
-        && !(column.indexOf(")") === -1)
+        if (((!(column.indexOf("(") === -1)
+        && !(column.indexOf(")") === -1))
+        || !(column.indexOf("Scattered") === -1))
+        // || false)
         && (column.indexOf("__") === -1)
         && !(column.indexOf("p_") === 0)
-        ) {
-            candidates.push(column)
-            let row = table.append("tr").attr("id", htmlSanitize(column)).attr("class", "candidate-row");
-            row.append("td").attr("id","key").text(column.split("(")[0]);
-            let values = row.append("td").attr("id","values")
-            values.append("td").attr("id","percent-to-update").text()
-            values.append("td").attr("id","value").text(total[column]);
+        )
+        {
+            candidatesUnsorted.push(column)
         }
     }
+
+
+    let candidatesRankVotes = Object.keys(rank).sort((a,b) => b - a);
+
+    for (let i=0; i<candidatesRankVotes.length; i++) {
+        let candidate = rank[candidatesRankVotes[i]]
+        if (candidatesUnsorted.indexOf(candidate) !== -1) {
+            candidates.push(candidate)
+        }
+    }
+
     for (let i=0;i<candidates.length;i++) {
         totalVotes += total[candidates[i]]
+        let row = table.append("tr").attr("id", htmlSanitize(candidates[i])).attr("class", "candidate-row");
+        row.append("td").attr("id","key").text(candidates[i].split("(")[0]);
+        let values = row.append("td").attr("id","values")
+        values.append("td").attr("id","percent-to-update").text()
+        values.append("td").attr("id","value").text(total[candidates[i]].toLocaleString());
     }
     for (let i=0; i<candidates.length;i++) {
         d3.select("#percent-to-update").attr("id","percent").text(((total[candidates[i]]/totalVotes)*100).toFixed(2)+"%")
@@ -78,7 +99,7 @@ function loadCSV(csv) {
     row.append("td").attr("id","key").text("Total");
     let values = row.append("td").attr("id","values")
     values.append("td").attr("id", "percent").text("100%")
-    values.append("td").attr("id","value").text(totalVotes);
+    values.append("td").attr("id","value").text(totalVotes.toLocaleString());
 
 }
 
@@ -137,6 +158,12 @@ map.on('load', function() {
             // "#000000",
             // "#ffffff"],
             "fill-color": "#ffffff",
+            // "fill-color": [
+            //     'match',
+            //     ["get", "ed"],
+            //     ...legend,
+            //     "#ffffff"  
+            // ],
             "fill-opacity": 0.7,
         }
     }, "road-label"
@@ -145,7 +172,6 @@ map.on('load', function() {
     //     "type": "geojson",
     //     "data": "./election_districts.geo.json"
     //     });
-    // debugger
 
     map.addLayer({
         "id": "Election District Border",
@@ -163,7 +189,10 @@ map.on('load', function() {
             "line-width": 2,
             "line-opacity": ["case", ["boolean", ["feature-state","hover"], false],
             1,
-            0]
+            0.25],
+            "line-width": ["case", ["boolean", ["feature-state","hover"], false],
+            2.5,
+            0.5]
         }
     }, "road-label")
     
@@ -182,7 +211,7 @@ map.on('load', function() {
             for (let i=0; i<candidates.length; i++) {
                 let EDCandidateCount = data[currentED][candidates[i]]
                 EDTotal += Number(EDCandidateCount)
-                d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(EDCandidateCount)
+                d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(EDCandidateCount.toLocaleString())
             }
             for (let i=0; i<candidates.length; i++) {
                 let EDCandidateCount = data[currentED][candidates[i]]
@@ -208,10 +237,10 @@ map.on('load', function() {
         d3.selectAll(".candidate-row").attr("class", "candidate-row-to-update")
         d3.selectAll("#percent").attr("id","percent-to-update")
         for (let i=0; i<candidates.length;i++) {
-            d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(total[candidates[i]])
+            d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(total[candidates[i]].toLocaleString())
             d3.select("#percent-to-update").attr('id','percent').text(((total[candidates[i]]/totalVotes)*100).toFixed(2)+"%")
         }
-        d3.select("#total-row").select("#value").text(totalVotes)
+        d3.select("#total-row").select("#value").text(totalVotes.toLocaleString())
 
     })
 
