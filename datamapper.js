@@ -14,7 +14,7 @@ let totalVotes = 0;
 let candidates = [];
 $.ajax({
     type: "GET",
-    url: "./Public_advocate.csv",
+    url: "./Public_Advocate.csv",
     dataType: "text",
     success: function(response) {loadCSV(response)}
 })
@@ -63,7 +63,9 @@ function loadCSV(csv) {
             candidates.push(column)
             let row = table.append("tr").attr("id", htmlSanitize(column)).attr("class", "candidate-row");
             row.append("td").attr("id","key").text(column.split("(")[0]);
-            row.append("td").attr("id","value").text(total[column]);
+            let values = row.append("td").attr("id","values")
+            values.append("td").attr("id","percent").text('test')
+            values.append("td").attr("id","value").text(total[column]);
         }
     }
     for (let i=0;i<candidates.length;i++) {
@@ -71,7 +73,9 @@ function loadCSV(csv) {
     }
     let row = table.append("tr").attr("id", "total-row");
     row.append("td").attr("id","key").text("Total");
-    row.append("td").attr("id","value").text(totalVotes)
+    let values = row.append("td").attr("id","values")
+    row.append("td").attr("id", "percent").text("100%")
+    row.append("td").attr("id","value").text(totalVotes);
 }
 
 

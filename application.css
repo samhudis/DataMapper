@@ -59,9 +59,15 @@ tr#heading-row {
 
 td {
     font-size: 8pt;
-    margin: 1.5%
+    margin: 1.5%;
 }
 
 #total-row {
     /* margin-top: auto */
+}
+
+#values {
+    width: 50%;
+    display: flex;
+    justify-content: space-between
 }
