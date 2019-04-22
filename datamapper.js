@@ -64,18 +64,22 @@ function loadCSV(csv) {
             let row = table.append("tr").attr("id", htmlSanitize(column)).attr("class", "candidate-row");
             row.append("td").attr("id","key").text(column.split("(")[0]);
             let values = row.append("td").attr("id","values")
-            values.append("td").attr("id","percent").text('test')
+            values.append("td").attr("id","percent-to-update").text()
             values.append("td").attr("id","value").text(total[column]);
         }
     }
     for (let i=0;i<candidates.length;i++) {
         totalVotes += total[candidates[i]]
     }
+    for (let i=0; i<candidates.length;i++) {
+        d3.select("#percent-to-update").attr("id","percent").text(((total[candidates[i]]/totalVotes)*100).toFixed(2)+"%")
+    }
     let row = table.append("tr").attr("id", "total-row");
     row.append("td").attr("id","key").text("Total");
     let values = row.append("td").attr("id","values")
-    row.append("td").attr("id", "percent").text("100%")
-    row.append("td").attr("id","value").text(totalVotes);
+    values.append("td").attr("id", "percent").text("100%")
+    values.append("td").attr("id","value").text(totalVotes);
+
 }
 
 
@@ -162,12 +166,6 @@ map.on('load', function() {
             0]
         }
     }, "road-label")
-
-    // const EDs = map.querySourceFeatures("Election District", {'sourceLayer': inSourceLayer});
-    // const features = map.queryRenderedFeatures();
-    // debugger
-    // zoomTo(features)
-    // map.flyto(turf.center(map.getLayer("Election District")))
     
     map.on("mousemove", "Election District", function(e) {
         if (e.features.length > 0) {
@@ -178,12 +176,22 @@ map.on('load', function() {
             hoveredId = e.features[0].id;
             currentED = e.features[0].properties.ed;
             d3.select("#table-title").text("ED "+currentED)
-            fields = d3.selectAll(".candidate-row").attr("class","candidate-row-to-update")
+            d3.selectAll(".candidate-row").attr("class","candidate-row-to-update")
+            d3.selectAll("#percent").attr("id", "percent-to-update")
             let EDTotal = 0
             for (let i=0; i<candidates.length; i++) {
                 let EDCandidateCount = data[currentED][candidates[i]]
                 EDTotal += Number(EDCandidateCount)
                 d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(EDCandidateCount)
+            }
+            for (let i=0; i<candidates.length; i++) {
+                let EDCandidateCount = data[currentED][candidates[i]]
+                if (EDTotal === 0) {
+                    d3.select("#percent-to-update").attr("id","percent").text("0%")
+                }
+                else {
+                    d3.select("#percent-to-update").attr("id","percent").text(((EDCandidateCount/EDTotal)*100).toFixed(2)+"%")
+                }
             }
             d3.select("#total-row").select("#value").text(EDTotal)
             map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District Border', id: hoveredId},{ hover: true});
@@ -198,8 +206,10 @@ map.on('load', function() {
         currentED = null;
         d3.select("#table-title").text("Total")
         d3.selectAll(".candidate-row").attr("class", "candidate-row-to-update")
+        d3.selectAll("#percent").attr("id","percent-to-update")
         for (let i=0; i<candidates.length;i++) {
             d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(total[candidates[i]])
+            d3.select("#percent-to-update").attr('id','percent').text(((total[candidates[i]]/totalVotes)*100).toFixed(2)+"%")
         }
         d3.select("#total-row").select("#value").text(totalVotes)
 

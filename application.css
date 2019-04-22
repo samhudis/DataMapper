@@ -51,11 +51,11 @@ tr#heading-row {
     justify-items: center
 }
 
-.data-row {
+/* .data-row {
     display: flex;
     justify-content: space-between;
     margin: 0.5em;
-}
+} */
 
 td {
     font-size: 8pt;
@@ -63,7 +63,6 @@ td {
 }
 
 #total-row {
-    /* margin-top: auto */
 }
 
 #values {
