@@ -1,6 +1,6 @@
 let ED = {};
 let EDLastClicked = 0;
-let legend = []
+let legend = ["Jumaane D. Williams","#000000"]
 // let legend = [[23001, 65001], '#000000',
 // 23002, '#000100'];
 const ElectDistJSON = jQuery.getJSON('./gis_temp/pa_eds_lite.geo.json').then((responseJSON) => {
@@ -114,6 +114,7 @@ zoom: 9
 let hoveredId = null;
 let currentED = null;
 const inSourceLayer = "pa_eds_lite-a0qgzr";
+// const inSourceLayer = "pa_eds_lite"
 
 const zoomTo = function(map, featureArr) {
     let n = -100;
@@ -145,6 +146,15 @@ const zoomToCity = function(map) {
 
 map.on('load', function() {
     zoomToCity(map)
+
+    // map.addSource('Election District', {
+    // "type": "geojson",
+    // "data": "./pa_eds_lite_2.geojson"
+    // // "data": "mapbox://samhudis.5jrmia73"
+    
+    // });
+    // debugger
+
     map.addLayer({
         "id": "Election District",
         "type": 'fill',
@@ -153,25 +163,28 @@ map.on('load', function() {
             url: 'mapbox://samhudis.5jrmia73'
         },
         "source-layer": inSourceLayer,
+        // "source": 'Election District',
         "paint": {
             // "fill-color": ["case", ["boolean", ["feature-state", "hover"], false],
             // "#000000",
             // "#ffffff"],
             "fill-color": "#ffffff",
-            // "fill-color": [
-            //     'match',
-            //     ["get", "ed"],
-            //     ...legend,
-            //     "#ffffff"  
-            // ],
+            "fill-color": [
+                'match',
+                ["get", "winner"],
+                ...legend,
+                "#ffffff"  
+            ],
             "fill-opacity": 0.7,
         }
     }, "road-label"
     )
-    // map.addSource('Election District', {
-    //     "type": "geojson",
-    //     "data": "./election_districts.geo.json"
-    //     });
+
+    // let EDs = Object.keys(data)
+    // for (let i=0; i<EDs.length;i++) {
+    //     debugger
+    //     map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District', id: EDs[i]},{ winner: data[EDs[i]]});
+    // }
 
     map.addLayer({
         "id": "Election District Border",
@@ -181,6 +194,7 @@ map.on('load', function() {
             url: 'mapbox://samhudis.5jrmia73'
         },
         "source-layer": inSourceLayer,
+        // "source": 'Election District',
         "paint": {
             // "line-color": ["case", ["boolean", ["feature-state", "hover"], false],
             // "#000000",
@@ -188,15 +202,18 @@ map.on('load', function() {
             "line-color": "#000000",
             "line-width": 2,
             "line-opacity": ["case", ["boolean", ["feature-state","hover"], false],
+            // "line-opacity": ["case", ["boolean", ["feature-state", "ed"], currentED],
             1,
             0.25],
             "line-width": ["case", ["boolean", ["feature-state","hover"], false],
+            // "line-width": ["case", ["boolean", ["feature-state", "ed"], currentED],
             2.5,
             0.5]
         }
     }, "road-label")
     
     map.on("mousemove", "Election District", function(e) {
+        map.getCanvas().style.cursor = 'pointer';
         if (e.features.length > 0) {
             if (hoveredId) {
                 map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District Border', id: hoveredId}
@@ -216,7 +233,7 @@ map.on('load', function() {
             for (let i=0; i<candidates.length; i++) {
                 let EDCandidateCount = data[currentED][candidates[i]]
                 if (EDTotal === 0) {
-                    d3.select("#percent-to-update").attr("id","percent").text("0%")
+                    d3.select("#percent-to-update").attr("id","percent").text("n/a")
                 }
                 else {
                     d3.select("#percent-to-update").attr("id","percent").text(((EDCandidateCount/EDTotal)*100).toFixed(2)+"%")
@@ -224,10 +241,14 @@ map.on('load', function() {
             }
             d3.select("#total-row").select("#value").text(EDTotal)
             map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District Border', id: hoveredId},{ hover: true});
+            // debugger
+            // map.setFeatureState({source: 'Election District', id: hoveredId}, { hover: true});
+            // map.setFeatureState(map.querySourceFeatures("Election District",{filter: ['==', 'ed', currentED]})[0], { hover: true})
         }
     })
 
     map.on("mouseleave", "Election District", function() {
+        map.getCanvas().style.cursor = '';
         if (hoveredId) {
             map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District Border', id: hoveredId}, { hover: false});
         }
@@ -256,3 +277,4 @@ map.on('load', function() {
         }
         });
 })
+

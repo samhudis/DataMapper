@@ -28,7 +28,8 @@ table {
     height: 100%;
     margin-right: 2em;
     margin-left: 1em;
-    display: flex
+    display: flex;
+    /* overflow-y: scroll */
 }
 
 tbody {
@@ -36,7 +37,9 @@ tbody {
     height: 100%;
     display: flex;
     flex-flow: column;
-    justify-content: space-between   
+    justify-content: space-between;
+    /* overflow-y: scroll */
+    overflow-y: auto
 }
 
 tr {
