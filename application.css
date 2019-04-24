@@ -26,7 +26,7 @@ header {
 table {
     color: black;
     width: 25em;
-    min-width: 210px;
+    min-width: 240px;
     height: 100%;
     margin-right: 2em;
     margin-left: 1em;
@@ -37,7 +37,8 @@ table {
 }
 
 tbody {
-    background: white;
+    /* background: gray; */
+    background: gray;
     width: 100%;
     height: 100%;
     display: flex;
@@ -75,6 +76,7 @@ tr#title-row {
     background: lightgray;
     margin-bottom: 0.5vh;
     margin-top: 0.5vh;
+    border: 1px solid gray;
     /* padding-left: 5%;
     padding-right: 5% */
 }
@@ -98,8 +100,8 @@ td {
 }
 
 #key {
-    padding-left: 2%;
-    padding-right: 2%;
+    /* padding-left: 2%; */
+    /* padding-right: 2%; */
     overflow: hidden;
     max-width: 40%
 }
@@ -124,7 +126,7 @@ tr#heading-row > td {
 }
 
 .candidate-row {
-    border-radius: 100px;
+    /* border-radius: 100px; */
     border: 1px solid black;
     padding: 1%
     /* margin-left: 10%;
@@ -133,8 +135,37 @@ tr#heading-row > td {
     /* height: 150px; */
 }
 
+.candidate-row > #key, .candidate-row > td > #percent, .candidate-row > td > #value {
+    padding-left: 2%;
+    padding-right: 2%;
+}
+
 #value, #key, #percent, #table-title {
     background: white;
     border-radius: 100px;
     border: 1px solid gray;
+}
+
+#total-row {
+    display: flex;
+    justify-content: space-between;
+    align-self: end;
+    min-width: max-content;
+    width: 30%;
+    padding: 1%;
+    padding-right: 10px
+}
+
+#total-row > #values {
+    display: flex;
+    justify-content: right;
+}
+
+#total-row > #values > #value {
+    /* width: auto; */
+    /* padding-left: 10%; */
+    /* padding-right: 10%; */
+    padding-left: 10px;
+    padding-right: 10px;
+    min-width: 50%;
 }

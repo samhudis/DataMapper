@@ -112,9 +112,20 @@ function loadCSV(csv) {
             color[candidate] = "#ffffff"}
     }
 
+    let row = table.append("tr").attr("id", "total-row");
+    row.append("td").attr("id","total-key").text("Total:");
+    let values = row.append("td").attr("id","values")
+    // values.append("td").attr("id", "total-percent").text("100%")
+    values.append("td").attr("id","value").text(totalVotes.toLocaleString());
+
+    const headingRow = table.append("tr").attr("id", "heading-row");
+    headingRow.append("td").text("Candidate");
+    headingRow.append("td").text("Percent");
+    headingRow.append("td").text("Votes");
+
     for (let i=0;i<candidates.length;i++) {
         totalVotes += total[candidates[i]]
-        let row = table.append("tr").attr("id", htmlSanitize(candidates[i])).attr("class", "candidate-row").style("background", color[candidates[i]]);
+        let row = table.append("tr").attr("id", htmlSanitize(candidates[i])).attr("class", "candidate-row").style("background", color[candidates[i]] || "white");
         row.append("td").attr("id","key").text(candidates[i].split("(")[0]);
         let values = row.append("td").attr("id","values")
         values.append("td").attr("id","percent-to-update").text()
@@ -123,11 +134,12 @@ function loadCSV(csv) {
     for (let i=0; i<candidates.length;i++) {
         d3.select("#percent-to-update").attr("id","percent").text(((total[candidates[i]]/totalVotes)*100).toFixed(2)+"%")
     }
-    let row = table.append("tr").attr("id", "total-row");
-    row.append("td").attr("id","total-key").text("Total");
-    let values = row.append("td").attr("id","values")
-    values.append("td").attr("id", "total-percent").text("100%")
-    values.append("td").attr("id","value").text(totalVotes.toLocaleString());
+    d3.select("#total-row").select("#value").text(totalVotes.toLocaleString());
+    // let row = table.append("tr").attr("id", "total-row");
+    // row.append("td").attr("id","total-key").text("Total");
+    // let values = row.append("td").attr("id","values")
+    // values.append("td").attr("id", "total-percent").text("100%")
+    // values.append("td").attr("id","value").text(totalVotes.toLocaleString());
 
 }
 
