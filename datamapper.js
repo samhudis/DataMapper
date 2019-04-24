@@ -1,6 +1,7 @@
 let ED = {};
 let EDLastClicked = 0;
-let legend = ["Jumaane D. Williams","#000000"]
+let legend = [];
+let color = {}
 // let legend = [[23001, 65001], '#000000',
 // 23002, '#000100'];
 const ElectDistJSON = jQuery.getJSON('./gis_temp/pa_eds_lite.geo.json').then((responseJSON) => {
@@ -25,7 +26,7 @@ $.ajax({
 })
 
 function htmlSanitize(str) {
-    const invalids = [".","'","'","(",")","."]
+    const invalids = [".","'","'","(",")",".","__"]
     for (let i=0; i<invalids.length; i++) {
         str = str.replace(invalids[i],"")
     }
@@ -84,9 +85,36 @@ function loadCSV(csv) {
         }
     }
 
+    //legend packing goes here
+    // legend.push([23001])
+    // legend.push("#000000")
+    const legendColors = ["#fdb800","#c10032","#006544","#78c7eb","#a9e558","#720091","#ffff00","#df73ff","#a87000","#004da8"]
+    let k = 0
+    for (let i=0; i<legendColors.length;) {
+        let candidate = candidates[k]
+        let EDs = Object.keys(data)
+        let winningEds = []
+        for (let j=0; j<EDs.length; j++) {
+            let ed = EDs[j]
+            if (data[ed].winner === candidate.replace(" (","__(")) {
+                winningEds.push(Number(ed))
+            }
+        }
+        if (winningEds.length > 1) {
+        legend.push(winningEds)
+        legend.push(legendColors[i])
+        color[candidate] = legendColors[i]
+        k++
+        i++
+        }
+        else {
+            k++;
+            color[candidate] = "#ffffff"}
+    }
+
     for (let i=0;i<candidates.length;i++) {
         totalVotes += total[candidates[i]]
-        let row = table.append("tr").attr("id", htmlSanitize(candidates[i])).attr("class", "candidate-row");
+        let row = table.append("tr").attr("id", htmlSanitize(candidates[i])).attr("class", "candidate-row").style("background", color[candidates[i]]);
         row.append("td").attr("id","key").text(candidates[i].split("(")[0]);
         let values = row.append("td").attr("id","values")
         values.append("td").attr("id","percent-to-update").text()
@@ -153,8 +181,6 @@ map.on('load', function() {
     // // "data": "mapbox://samhudis.5jrmia73"
     
     // });
-    // debugger
-
     map.addLayer({
         "id": "Election District",
         "type": 'fill',
@@ -171,8 +197,9 @@ map.on('load', function() {
             "fill-color": "#ffffff",
             "fill-color": [
                 'match',
-                ["get", "winner"],
+                ["get", "ed"],
                 ...legend,
+                // [23001], "#000000",
                 "#ffffff"  
             ],
             "fill-opacity": 0.7,
