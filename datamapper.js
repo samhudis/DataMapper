@@ -124,9 +124,9 @@ function loadCSV(csv) {
         d3.select("#percent-to-update").attr("id","percent").text(((total[candidates[i]]/totalVotes)*100).toFixed(2)+"%")
     }
     let row = table.append("tr").attr("id", "total-row");
-    row.append("td").attr("id","key").text("Total");
+    row.append("td").attr("id","total-key").text("Total");
     let values = row.append("td").attr("id","values")
-    values.append("td").attr("id", "percent").text("100%")
+    values.append("td").attr("id", "total-percent").text("100%")
     values.append("td").attr("id","value").text(totalVotes.toLocaleString());
 
 }
