@@ -65,6 +65,7 @@ tbody {
     align-items: center;
     /* min-height: fit-content; */
     /* overflow-y: scroll */
+    overflow-x: hidden;
     overflow-y: auto;
     /* overflow-x: hidden; */
     padding-left: 1%;
@@ -213,4 +214,13 @@ tr#heading-row > td {
 .popup {
     background-color: blue;
     max-height: 1pt
+}
+
+.candidate-row:hover {
+    border-radius: 10px;
+    border: 3px solid black;
+    padding: 1%;
+    margin: 5px;
+    /* margin-left: 5px; */
+    /* margin-right: 5px; */
 }

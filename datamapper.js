@@ -29,7 +29,8 @@ $.ajax({
 })
 
 function htmlSanitize(str) {
-    const invalids = [".","'","'","(",")",".","__"]
+    str = str.replace("__"," ")
+    const invalids = [".","'","'","(",")","."]
     for (let i=0; i<invalids.length; i++) {
         str = str.replace(invalids[i],"")
     }
@@ -125,7 +126,8 @@ function loadCSV(csv) {
 
     for (let i=0;i<candidates.length;i++) {
         totalVotes += total[candidates[i]]
-        let row = table.append("tr").attr("onmouseover", `map.setPaintProperty('Election District', 'fill-color', "${legendColors[i]}")`).attr("id", htmlSanitize(candidates[i])).attr("class", "candidate-row").style("background", color[candidates[i]] || "white");
+        let row = table.append("tr")//.attr("onmouseover", `map.setPaintProperty('Election District', 'fill-color', "${legendColors[i]}")`)
+        .attr("id", htmlSanitize(candidates[i])).attr("class", "candidate-row").style("background", color[candidates[i]] || "white");
         row.append("td").attr("id","key").text(candidates[i].split("(")[0]);
         let values = row.append("td").attr("id","values")
         values.append("td").attr("id","percent-to-update").text()
@@ -265,10 +267,25 @@ map.on('load', function() {
         sourceFeatures = map.querySourceFeatures("Election District")
         if (sourceFeatures.length > 0) {
         for (let i=0; i<sourceFeatures.length;i++) {
+            let state = {};
             // map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District', id: EDs[i]},{ winner: data[EDs[i]]});
             let feature = sourceFeatures[i];
             // map.setFeatureState({source: 'Election District', id: EDs[i]}, {winner: data[EDs[i]].winner});
-            map.setFeatureState({source: 'Election District', id: feature.id}, {winner: data[feature.properties.ed].winner})
+            // debugger
+            let EDTotal = 0;
+            for (let j=0; j<candidates.length; j++) {
+                let EDCandidateCount = data[feature.properties.ed][candidates[j]]
+                EDTotal += Number(EDCandidateCount)
+            }
+            for (let j=0; j<candidates.length; j++) {
+                let EDCandidateCount = data[feature.properties.ed][candidates[j]]
+                let pCandidateName = `p_${candidates[j]}`
+                let pCandidateValue = (EDCandidateCount/EDTotal).toFixed(4)
+                // map.setFeatureState({source: 'Election District', id: feature.id}, {pCandidate: data})
+                state[pCandidateName] = pCandidateValue
+            }
+            state.winner = data[feature.properties.ed].winner.replace("__"," ")
+            map.setFeatureState({source: 'Election District', id: feature.id}, state)
         }
         sourceLoaded = true
         }}
@@ -310,6 +327,7 @@ map.on('load', function() {
     })
     
     map.on("mousemove", "Election District", function(e) {
+        debugger
         map.getCanvas().style.cursor = 'pointer';
         if (e.features.length > 0) {
             if (hoveredId || hoveredId === 0) {
