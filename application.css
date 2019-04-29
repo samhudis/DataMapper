@@ -20,6 +20,7 @@ footer > a {
 }
 
 header {
+    /* height: 10vh; */
     display: flex;
     flex-direction: column;
     align-items: center
@@ -28,7 +29,7 @@ header {
 #data-container {
       display: flex;
       justify-content: center;
-      height: 70vh
+      height: 75vh
 }
 
 #map {
@@ -207,4 +208,9 @@ tr#heading-row > td {
 
 #value {
     min-width: 25%
+}
+
+.popup {
+    background-color: blue;
+    max-height: 1pt
 }

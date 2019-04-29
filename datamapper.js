@@ -1,4 +1,5 @@
 let ED = {};
+let sourceLoaded = false;
 let EDLastClicked = 0;
 let legend = [];
 let color = {}
@@ -10,6 +11,7 @@ for (let i=0; i < features.length; i++) {
     let ed = features[i].properties.ed;
     ED[ed] = features[i];
 }
+// ED = null;
 })
 let data = {};
 let columns = [];
@@ -17,6 +19,7 @@ let total = {};
 let totalVotes = 0;
 let candidates = [];
 let rank = {};
+let sourceFeatures = []
 
 $.ajax({
     type: "GET",
@@ -122,7 +125,7 @@ function loadCSV(csv) {
 
     for (let i=0;i<candidates.length;i++) {
         totalVotes += total[candidates[i]]
-        let row = table.append("tr").attr("id", htmlSanitize(candidates[i])).attr("class", "candidate-row").style("background", color[candidates[i]] || "white");
+        let row = table.append("tr").attr("onmouseover", `map.setPaintProperty('Election District', 'fill-color', "${legendColors[i]}")`).attr("id", htmlSanitize(candidates[i])).attr("class", "candidate-row").style("background", color[candidates[i]] || "white");
         row.append("td").attr("id","key").text(candidates[i].split("(")[0]);
         let values = row.append("td").attr("id","values")
         values.append("td").attr("id","percent-to-update").text()
@@ -174,15 +177,53 @@ const zoomTo = function(map, featureArr) {
 
 const zoomToED = function(map, ed) {
     let features = [ED[ed]]
+    // let features = map.querySourceFeatures('Election District', {filter: ["==", "ed", ed]})
     zoomTo(map, features)
 }
 
 const zoomToCity = function(map) {
     map.fitBounds([[-74.2556845,40.4955504],[-73.7018294,40.9153539]], {padding: 5})
+    // zoomTo(map, map.querySourceFeatures('Election District'))
+}
+
+const updateTable = function() {
+    d3.select("#table-title").text("ED "+currentED)
+        d3.selectAll(".candidate-row").attr("class","candidate-row-to-update")
+        d3.selectAll("#percent").attr("id", "percent-to-update")
+        let EDTotal = 0
+        for (let i=0; i<candidates.length; i++) {
+            let EDCandidateCount = data[currentED][candidates[i]]
+            EDTotal += Number(EDCandidateCount)
+            d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(EDCandidateCount.toLocaleString())
+        }
+        for (let i=0; i<candidates.length; i++) {
+            let EDCandidateCount = data[currentED][candidates[i]]
+            if (EDTotal === 0) {
+                d3.select("#percent-to-update").attr("id","percent").text("n/a")
+            }
+            else {
+                d3.select("#percent-to-update").attr("id","percent").text(((EDCandidateCount/EDTotal)*100).toFixed(2)+"%")
+            }
+        }
+        d3.select("#total-row").select("#value").text(EDTotal)
+}
+
+const resetTable = function() {
+    d3.select("#table-title").text("Total")
+        d3.selectAll(".candidate-row").attr("class", "candidate-row-to-update")
+        d3.selectAll("#percent").attr("id","percent-to-update")
+        for (let i=0; i<candidates.length;i++) {
+            d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(total[candidates[i]].toLocaleString())
+            d3.select("#percent-to-update").attr('id','percent').text(((total[candidates[i]]/totalVotes)*100).toFixed(2)+"%")
+        }
+        d3.select("#total-row").select("#value").text(totalVotes.toLocaleString())
 }
 
 map.on('load', function() {
+    let clickedED = null
     zoomToCity(map)
+
+    map.addControl(new mapboxgl.NavigationControl());
 
     map.addSource('Election District', {
     "type": "geojson",
@@ -204,7 +245,7 @@ map.on('load', function() {
             // "fill-color": ["case", ["boolean", ["feature-state", "hover"], false],
             // "#000000",
             // "#ffffff"],
-            "fill-color": "#ffffff",
+            // "fill-color": "#ffffff",
             "fill-color": [
                 'match',
                 ["get", "ed"],
@@ -218,20 +259,21 @@ map.on('load', function() {
     )
 
     map.on('sourcedata', () => {
+        if (!sourceLoaded) {
         if (map.getSource('Election District') && map.isSourceLoaded('Election District')) {
-    let EDs = Object.keys(data)
-    let sourceFeatures = map.querySourceFeatures("Election District")
-    // debugger
-    if (sourceFeatures.length > 0) {
-    for (let i=0; i<sourceFeatures.length;i++) {
-        // map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District', id: EDs[i]},{ winner: data[EDs[i]]});
-        // debugger
-        let feature = sourceFeatures[i];
-        // map.setFeatureState({source: 'Election District', id: EDs[i]}, {winner: data[EDs[i]].winner});
-        map.setFeatureState({source: 'Election District', id: feature.id}, {winner: data[feature.properties.ed].winner})
-        // debugger
-    }
-    }}})
+        // let EDs = Object.keys(data)
+        sourceFeatures = map.querySourceFeatures("Election District")
+        if (sourceFeatures.length > 0) {
+        for (let i=0; i<sourceFeatures.length;i++) {
+            // map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District', id: EDs[i]},{ winner: data[EDs[i]]});
+            let feature = sourceFeatures[i];
+            // map.setFeatureState({source: 'Election District', id: EDs[i]}, {winner: data[EDs[i]].winner});
+            map.setFeatureState({source: 'Election District', id: feature.id}, {winner: data[feature.properties.ed].winner})
+        }
+        sourceLoaded = true
+        }}
+        }}
+    )
 
     map.addLayer({
         "id": "Election District Border",
@@ -248,16 +290,24 @@ map.on('load', function() {
             // "#ffffff"],
             "line-color": "#000000",
             "line-width": 2,
-            "line-opacity": ["case", ["boolean", ["feature-state","hover"], false],
-            // "line-opacity": ["case", ["boolean", ["feature-state", "ed"], currentED],
-            1,
+             // "line-opacity": ["case", ["boolean", ["feature-state", "ed"], currentED],
+            "line-opacity": ["case",
+            ["boolean", ["feature-state","selected"], false],1,
+            ["boolean", ["feature-state","hover"], false],1,
             0.25],
-            "line-width": ["case", ["boolean", ["feature-state","hover"], false],
             // "line-width": ["case", ["boolean", ["feature-state", "ed"], currentED],
-            2.5,
+            "line-width": ["case",
+            ["boolean", ["feature-state","selected"], false],5,
+            ["boolean", ["feature-state","hover"], false],2.5,
             0.5]
         }
     }, "road-label")
+
+    var popup = new mapboxgl.Popup({
+        closeButton: false,
+        closeOnClick: false,
+        // className: "popup"
+    })
     
     map.on("mousemove", "Election District", function(e) {
         map.getCanvas().style.cursor = 'pointer';
@@ -269,33 +319,38 @@ map.on('load', function() {
             }
             hoveredId = e.features[0].id;
             currentED = e.features[0].properties.ed;
-            d3.select("#table-title").text("ED "+currentED)
-            d3.selectAll(".candidate-row").attr("class","candidate-row-to-update")
-            d3.selectAll("#percent").attr("id", "percent-to-update")
-            let EDTotal = 0
-            for (let i=0; i<candidates.length; i++) {
-                let EDCandidateCount = data[currentED][candidates[i]]
-                EDTotal += Number(EDCandidateCount)
-                d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(EDCandidateCount.toLocaleString())
-            }
-            for (let i=0; i<candidates.length; i++) {
-                let EDCandidateCount = data[currentED][candidates[i]]
-                if (EDTotal === 0) {
-                    d3.select("#percent-to-update").attr("id","percent").text("n/a")
-                }
-                else {
-                    d3.select("#percent-to-update").attr("id","percent").text(((EDCandidateCount/EDTotal)*100).toFixed(2)+"%")
-                }
-            }
-            d3.select("#total-row").select("#value").text(EDTotal)
+            // popup.setLngLat(e.lngLat).setHTML(`<p style="color:black;">${currentED}</p>`).addTo(map)
+            if (clickedED === null || clickedED.properties.ed === e.features[0].properties.ed) {
+                updateTable()
+            // d3.select("#table-title").text("ED "+currentED)
+            // d3.selectAll(".candidate-row").attr("class","candidate-row-to-update")
+            // d3.selectAll("#percent").attr("id", "percent-to-update")
+            // let EDTotal = 0
+            // for (let i=0; i<candidates.length; i++) {
+            //     let EDCandidateCount = data[currentED][candidates[i]]
+            //     EDTotal += Number(EDCandidateCount)
+            //     d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(EDCandidateCount.toLocaleString())
+            // }
+            // for (let i=0; i<candidates.length; i++) {
+            //     let EDCandidateCount = data[currentED][candidates[i]]
+            //     if (EDTotal === 0) {
+            //         d3.select("#percent-to-update").attr("id","percent").text("n/a")
+            //     }
+            //     else {
+            //         d3.select("#percent-to-update").attr("id","percent").text(((EDCandidateCount/EDTotal)*100).toFixed(2)+"%")
+            //     }
+            // }
+            // d3.select("#total-row").select("#value").text(EDTotal)
             // map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District Border', id: hoveredId},{ hover: true});
-            // debugger
             map.setFeatureState({source: 'Election District', id: hoveredId}, { hover: true});
+            }
             // map.setFeatureState(map.querySourceFeatures("Election District",{filter: ['==', 'ed', currentED]})[0], { hover: true})
+            // map.setPaintProperty('Election District', 'fill-color', "#ffffff");
         }
     })
 
     map.on("mouseleave", "Election District", function() {
+        // popup.remove();
         map.getCanvas().style.cursor = '';
         if (hoveredId || hoveredId === 0) {
             // map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District Border', id: hoveredId}, { hover: false});
@@ -303,27 +358,60 @@ map.on('load', function() {
         }
         hoveredId = null;
         currentED = null;
-        d3.select("#table-title").text("Total")
-        d3.selectAll(".candidate-row").attr("class", "candidate-row-to-update")
-        d3.selectAll("#percent").attr("id","percent-to-update")
-        for (let i=0; i<candidates.length;i++) {
-            d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(total[candidates[i]].toLocaleString())
-            d3.select("#percent-to-update").attr('id','percent').text(((total[candidates[i]]/totalVotes)*100).toFixed(2)+"%")
+        if (clickedED === null) {
+            resetTable()
+        // d3.select("#table-title").text("Total")
+        // d3.selectAll(".candidate-row").attr("class", "candidate-row-to-update")
+        // d3.selectAll("#percent").attr("id","percent-to-update")
+        // for (let i=0; i<candidates.length;i++) {
+        //     d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(total[candidates[i]].toLocaleString())
+        //     d3.select("#percent-to-update").attr('id','percent').text(((total[candidates[i]]/totalVotes)*100).toFixed(2)+"%")
+        // }
+        // d3.select("#total-row").select("#value").text(totalVotes.toLocaleString())
         }
-        d3.select("#total-row").select("#value").text(totalVotes.toLocaleString())
-
     })
 
     map.on('click', 'Election District', function (e) {
-        let clickedED = e.features[0].properties.ed;
-        if (clickedED === EDLastClicked) {
+        // let clickedED = e.features[0].properties.ed;
+        clickedED = e.features[0]
+        if (EDLastClicked) {
+            map.setFeatureState({source: 'Election District', id: EDLastClicked.id}, {selected: false})
+            }
+        if (EDLastClicked && (clickedED.id === EDLastClicked.id)) {
             EDLastClicked = null;
-            zoomToCity(map);
+            clickedED = null;
+            // zoomToCity(map);
+            zoomTo(map, sourceFeatures)
         }
         else {
         EDLastClicked = clickedED;
-        zoomToED(map, clickedED);
+        map.setFeatureState({source: 'Election District', id: clickedED.id}, {selected: true})
+        zoomToED(map, clickedED.properties.ed);
+        updateTable()
+        // d3.select("#table-title").text("ED "+currentED)
+        // d3.selectAll(".candidate-row").attr("class","candidate-row-to-update")
+        // d3.selectAll("#percent").attr("id", "percent-to-update")
+        // let EDTotal = 0
+        // for (let i=0; i<candidates.length; i++) {
+        //     let EDCandidateCount = data[currentED][candidates[i]]
+        //     EDTotal += Number(EDCandidateCount)
+        //     d3.select(".candidate-row-to-update").attr("class","candidate-row").select("#value").text(EDCandidateCount.toLocaleString())
+        // }
+        // for (let i=0; i<candidates.length; i++) {
+        //     let EDCandidateCount = data[currentED][candidates[i]]
+        //     if (EDTotal === 0) {
+        //         d3.select("#percent-to-update").attr("id","percent").text("n/a")
+        //     }
+        //     else {
+        //         d3.select("#percent-to-update").attr("id","percent").text(((EDCandidateCount/EDTotal)*100).toFixed(2)+"%")
+        //     }
+        // }
+        // d3.select("#total-row").select("#value").text(EDTotal)
+        // map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District Border', id: hoveredId},{ hover: true});
         }
+        map.setFeatureState({source: 'Election District', id: hoveredId}, { hover: true});
+        // map.setFeatureState(map.querySourceFeatures("Election District",{filter: ['==', 'ed', currentED]})[0], { hover: true})
+        // map.setPaintProperty('Election District', 'fill-color', "#ffffff");
         });
 })
 
