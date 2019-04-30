@@ -126,7 +126,13 @@ function loadCSV(csv) {
 
     for (let i=0;i<candidates.length;i++) {
         totalVotes += total[candidates[i]]
-        let row = table.append("tr")//.attr("onmouseover", `map.setPaintProperty('Election District', 'fill-color', "${legendColors[i]}")`)
+        let row = table.append("tr").attr("onmouseover", `map.setPaintProperty('Election District', 'fill-color', "${legendColors[i]}")`)
+        .attr("onmouseout", `map.setPaintProperty('Election District', 'fill-color', [
+                'match',
+                ["get", "ed"],
+                ...legend,
+                "#ffffff"  
+            ])`)
         .attr("id", htmlSanitize(candidates[i])).attr("class", "candidate-row").style("background", color[candidates[i]] || "white");
         row.append("td").attr("id","key").text(candidates[i].split("(")[0]);
         let values = row.append("td").attr("id","values")
@@ -244,15 +250,10 @@ map.on('load', function() {
         // "source-layer": inSourceLayer,
         "source": 'Election District',
         "paint": {
-            // "fill-color": ["case", ["boolean", ["feature-state", "hover"], false],
-            // "#000000",
-            // "#ffffff"],
-            // "fill-color": "#ffffff",
             "fill-color": [
                 'match',
                 ["get", "ed"],
                 ...legend,
-                // [23001], "#000000",
                 "#ffffff"  
             ],
             "fill-opacity": 0.7,
@@ -327,7 +328,6 @@ map.on('load', function() {
     })
     
     map.on("mousemove", "Election District", function(e) {
-        debugger
         map.getCanvas().style.cursor = 'pointer';
         if (e.features.length > 0) {
             if (hoveredId || hoveredId === 0) {
