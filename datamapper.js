@@ -1,11 +1,84 @@
-let ED = {};
+// document.addEventListener('DOMContentLoaded', () => {
 let sourceLoaded = false;
+
+var loadMap = function() {
+    selectedIndex = document.getElementById("selector").selectedIndex
+    d3.select("h1").text(`Election Results: ${elections[selectedIndex]}`)
+    sourceLoaded = false
+    map.addSource('Election District', {
+        "type": "geojson",
+        "data": options[selectedIndex].geoJSON,
+        'generateId': true
+        })
+    map.addLayer({
+        "id": "Election District",
+        "type": 'fill',
+        "source": 'Election District',
+        "paint": {
+            "fill-color": [
+                'match',
+                ["get", "ed"],
+                ...legend,
+                "#ffffff"  
+            ],
+            "fill-opacity": 0.7,
+        }
+    }, "road-label"
+    )
+    map.addLayer({
+        "id": "Election District Border",
+        "type": 'line',
+        "source": 'Election District',
+        "paint": {
+            "line-color": "#000000",
+            "line-width": 2,
+            "line-opacity": ["case",
+            ["boolean", ["feature-state","selected"], false],1,
+            ["boolean", ["feature-state","hover"], false],1,
+            0.25],
+            "line-width": ["case",
+            ["boolean", ["feature-state","selected"], false],5,
+            ["boolean", ["feature-state","hover"], false],2.5,
+            0.5]
+        }
+    }, "road-label")
+    
+
+
+}
+
+var unloadMap = function() {
+    if (map.getLayer("Election District Border")) {
+    map.removeLayer("Election District Border")}
+    if (map.getLayer("Election District")) {
+    map.removeLayer("Election District")}
+    if (map.getSource("Election District")) {
+    map.removeSource("Election District")}
+}
+
+const elections = ["NYC Public Advocate, February 26th, 2019","NY City Council, May 14th, 2019"]
+const selector = d3.select("select")
+selector.attr("onchange", `unloadMap(); loadMap()`)
+for (let i=0; i<elections.length; i++) {
+const option = selector.append("option").text(`${elections[i]}`)
+if (i===0) {option.attr("selected","selected")}
+}
+
+let selectedIndex = document.getElementById("selector").selectedIndex
+const options = {}
+const PublicAdvocate = {geoJSON: "./pa_eds_lite_2.geojson", data: "./Public_Advocate.csv"}
+options[0] = PublicAdvocate
+
+
+let ED = {};
 let EDLastClicked = 0;
 let legend = [];
 let color = {}
 // let legend = [[23001, 65001], '#000000',
 // 23002, '#000100'];
-const ElectDistJSON = jQuery.getJSON('./gis_temp/pa_eds_lite.geo.json').then((responseJSON) => {
+// const ElectDistJSON = jQuery.getJSON('./gis_temp/pa_eds_lite.geo.json').then((responseJSON) => {
+// jQuery.getJSON(options[selectedIndex].geoJSON).then((responseJSON) => {
+jQuery.getJSON("./pa_eds_lite_2.geojson").then((responseJSON) => {
 const features = responseJSON.features;
 for (let i=0; i < features.length; i++) {
     let ed = features[i].properties.ed;
@@ -23,7 +96,7 @@ let sourceFeatures = []
 
 $.ajax({
     type: "GET",
-    url: "./Public_Advocate.csv",
+    url: options[selectedIndex].data,
     dataType: "text",
     success: function(response) {loadCSV(response)}
 })
@@ -126,7 +199,9 @@ function loadCSV(csv) {
 
     for (let i=0;i<candidates.length;i++) {
         totalVotes += total[candidates[i]]
-        let row = table.append("tr").attr("onmouseover", `map.setPaintProperty('Election District', 'fill-color', "${legendColors[i]}")`)
+        let row = table.append("tr")
+        // .attr("onmouseover", `map.setPaintProperty('Election District', 'fill-color', "${legendColors[i]}")`)
+        // .attr("onclick", `map.setPaintProperty('Election District', 'fill-color', "${legendColors[i]}")`)
         .attr("onmouseout", `map.setPaintProperty('Election District', 'fill-color', [
                 'match',
                 ["get", "ed"],
@@ -153,7 +228,7 @@ function loadCSV(csv) {
 
 
 mapboxgl.accessToken = 'pk.eyJ1Ijoic2FtaHVkaXMiLCJhIjoiY2pudzdwZTIyMDA2dTN2bWVtY3Q1Znc5NSJ9.KKMNkGea2HILNgmDRDDj9Q';
-var map = new mapboxgl.Map({
+const map = new mapboxgl.Map({
 container: 'map',
 style: 'mapbox://styles/samhudis/cjuefwyqu1o5j1fnrju4ywcgq',
 center: [-73.97875695,40.70545215],
@@ -235,19 +310,13 @@ map.on('load', function() {
 
     map.addSource('Election District', {
     "type": "geojson",
-    "data": "./pa_eds_lite_2.geojson",
-    // // "data": "mapbox://samhudis.5jrmia73",
+    "data": options[selectedIndex].geoJSON,
     'generateId': true
     })
 
     map.addLayer({
         "id": "Election District",
         "type": 'fill',
-        // "source": {
-        //     type: 'vector',
-        //     url: 'mapbox://samhudis.5jrmia73'
-        // },
-        // "source-layer": inSourceLayer,
         "source": 'Election District',
         "paint": {
             "fill-color": [
@@ -296,24 +365,14 @@ map.on('load', function() {
     map.addLayer({
         "id": "Election District Border",
         "type": 'line',
-        // "source": {
-        //     type: 'vector',
-        //     url: 'mapbox://samhudis.5jrmia73'
-        // },
-        // "source-layer": inSourceLayer,
         "source": 'Election District',
         "paint": {
-            // "line-color": ["case", ["boolean", ["feature-state", "hover"], false],
-            // "#000000",
-            // "#ffffff"],
             "line-color": "#000000",
             "line-width": 2,
-             // "line-opacity": ["case", ["boolean", ["feature-state", "ed"], currentED],
             "line-opacity": ["case",
             ["boolean", ["feature-state","selected"], false],1,
             ["boolean", ["feature-state","hover"], false],1,
             0.25],
-            // "line-width": ["case", ["boolean", ["feature-state", "ed"], currentED],
             "line-width": ["case",
             ["boolean", ["feature-state","selected"], false],5,
             ["boolean", ["feature-state","hover"], false],2.5,
@@ -321,11 +380,11 @@ map.on('load', function() {
         }
     }, "road-label")
 
-    var popup = new mapboxgl.Popup({
-        closeButton: false,
-        closeOnClick: false,
+    // var popup = new mapboxgl.Popup({
+    //     closeButton: false,
+    //     closeOnClick: false,
         // className: "popup"
-    })
+    // })
     
     map.on("mousemove", "Election District", function(e) {
         map.getCanvas().style.cursor = 'pointer';
@@ -433,3 +492,5 @@ map.on('load', function() {
         });
 })
 
+
+// });

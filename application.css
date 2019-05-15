@@ -4,6 +4,10 @@ color: white;
 font-family: 'Courier New', Courier, monospace;
 }
 
+h1 {
+    margin-bottom: 2vh;
+}
+
 footer {
     margin-top: 1%;
     display: flex;
