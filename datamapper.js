@@ -5,6 +5,8 @@ var loadMap = function() {
     selectedIndex = document.getElementById("selector").selectedIndex
     d3.select("h1").text(`Election Results: ${elections[selectedIndex]}`)
     sourceLoaded = false
+    loadData(redrawMap)
+    function redrawMap() {
     map.addSource('Election District', {
         "type": "geojson",
         "data": options[selectedIndex].geoJSON,
@@ -42,6 +44,7 @@ var loadMap = function() {
             0.5]
         }
     }, "road-label")
+    }
     
 
 
@@ -49,11 +52,12 @@ var loadMap = function() {
 
 var unloadMap = function() {
     if (map.getLayer("Election District Border")) {
-    map.removeLayer("Election District Border")}
+    map.removeLayer("Election District Border")};
     if (map.getLayer("Election District")) {
-    map.removeLayer("Election District")}
+    map.removeLayer("Election District")};
     if (map.getSource("Election District")) {
-    map.removeSource("Election District")}
+    map.removeSource("Election District")};
+    unloadCSV();
 }
 
 const elections = ["NYC Public Advocate, February 26th, 2019","NY City Council, May 14th, 2019"]
@@ -65,9 +69,12 @@ if (i===0) {option.attr("selected","selected")}
 }
 
 let selectedIndex = document.getElementById("selector").selectedIndex
+d3.select("h1").text(`Election Results: ${elections[selectedIndex]}`)
 const options = {}
 const PublicAdvocate = {geoJSON: "./pa_eds_lite_2.geojson", data: "./Public_Advocate.csv"}
 options[0] = PublicAdvocate
+const CityCouncil45 = {geoJSON: "./pa_eds_lite_2.geojson", data: "./Member_of_the_City_Council.csv"}
+options[1] = CityCouncil45
 
 
 let ED = {};
@@ -78,7 +85,7 @@ let color = {}
 // 23002, '#000100'];
 // const ElectDistJSON = jQuery.getJSON('./gis_temp/pa_eds_lite.geo.json').then((responseJSON) => {
 // jQuery.getJSON(options[selectedIndex].geoJSON).then((responseJSON) => {
-jQuery.getJSON("./pa_eds_lite_2.geojson").then((responseJSON) => {
+jQuery.getJSON(options[selectedIndex].geoJSON).then((responseJSON) => {
 const features = responseJSON.features;
 for (let i=0; i < features.length; i++) {
     let ed = features[i].properties.ed;
@@ -94,12 +101,25 @@ let candidates = [];
 let rank = {};
 let sourceFeatures = []
 
-$.ajax({
-    type: "GET",
-    url: options[selectedIndex].data,
-    dataType: "text",
-    success: function(response) {loadCSV(response)}
-})
+const loadData = function(callback) {
+    jQuery.getJSON(options[selectedIndex].geoJSON).then((responseJSON) => {
+        const features = responseJSON.features;
+        for (let i=0; i < features.length; i++) {
+            let ed = features[i].properties.ed;
+            ED[ed] = features[i];
+        }})
+
+
+    $.ajax({
+        type: "GET",
+        url: options[selectedIndex].data,
+        dataType: "text",
+        success: function(response) {loadCSV(response)
+        if (callback) {callback()}},
+    })
+}
+
+loadData()
 
 function htmlSanitize(str) {
     str = str.replace("__"," ")
@@ -142,7 +162,8 @@ function loadCSV(csv) {
         let column = columns[i]
         if (((!(column.indexOf("(") === -1)
         && !(column.indexOf(")") === -1))
-        || !(column.indexOf("Scattered") === -1))
+        || !(column.indexOf("Scattered") === -1)
+        || !(column.indexOf("WRITE-IN") === -1))
         && (column.indexOf("__") === -1)
         && !(column.indexOf("p_") === 0)
         )
@@ -164,8 +185,9 @@ function loadCSV(csv) {
     //legend packing
     const legendColors = ["#fdb800","#c10032","#006544","#78c7eb","#a9e558","#720091","#ffff00","#df73ff","#a87000","#004da8"]
     let k = 0
-    for (let i=0; i<legendColors.length;) {
+    for (let i=0; (i<legendColors.length);) {
         let candidate = candidates[k]
+        if (candidate === undefined) {break}
         let EDs = Object.keys(data)
         let winningEds = []
         for (let j=0; j<EDs.length; j++) {
@@ -223,6 +245,21 @@ function loadCSV(csv) {
     // let values = row.append("td").attr("id","values")
     // values.append("td").attr("id", "total-percent").text("100%")
     // values.append("td").attr("id","value").text(totalVotes.toLocaleString());
+
+}
+
+function unloadCSV() {
+    total = {};
+    data = {};
+    rank = {};
+    legend = [];
+    color = {};
+    candidates = [];
+    totalVotes = 0;
+    // let table = d3.select("tbody")
+    d3.select("#total-row").remove();
+    d3.select("#heading-row").remove();
+    d3.selectAll(".candidate-row").remove();
 
 }
 
@@ -341,7 +378,6 @@ map.on('load', function() {
             // map.setFeatureState({sourceLayer: inSourceLayer, source: 'Election District', id: EDs[i]},{ winner: data[EDs[i]]});
             let feature = sourceFeatures[i];
             // map.setFeatureState({source: 'Election District', id: EDs[i]}, {winner: data[EDs[i]].winner});
-            // debugger
             let EDTotal = 0;
             for (let j=0; j<candidates.length; j++) {
                 let EDCandidateCount = data[feature.properties.ed][candidates[j]]

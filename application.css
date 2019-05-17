@@ -5,7 +5,8 @@ font-family: 'Courier New', Courier, monospace;
 }
 
 h1 {
-    margin-bottom: 2vh;
+    margin-bottom: 1vh;
+    margin-top: 0.5vh;
 }
 
 footer {
