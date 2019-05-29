@@ -60,7 +60,8 @@ var unloadMap = function() {
     unloadCSV();
 }
 
-const elections = ["NYC Public Advocate, February 26th, 2019","NY City Council, May 14th, 2019"]
+const elections = ["NYC Public Advocate, February 26th, 2019"]
+// const elections = ["NYC Public Advocate, February 26th, 2019","NY City Council, May 14th, 2019"]
 const selector = d3.select("select")
 selector.attr("onchange", `unloadMap(); loadMap()`)
 for (let i=0; i<elections.length; i++) {
