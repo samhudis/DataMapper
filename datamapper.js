@@ -1,14 +1,12 @@
 // document.addEventListener('DOMContentLoaded', () => {
-let sourceLoaded = false;
-let atomicGeoJSONUnit = "ElectDist"
-let atomicDataUnit = "ED"
+// let atomicGeoJSONUnit = "ElectDist"
+// let atomicDataUnit = "ED"
 let atomicUnit = "ElectDist"
 
 var loadMap = function() {
     selectedIndex = document.getElementById("selector").selectedIndex
     d3.select("h1").text(`Election Results: ${elections[selectedIndex].replace(/_/g," ")}`)
-    sourceLoaded = false
-    // loadData(redrawMap)
+    map.sourceLoaded = false
     function redrawMap() {
         map.addSource('Election District', {
             "type": "geojson",
@@ -49,12 +47,10 @@ var loadMap = function() {
         }, "road-label")
     }
     loadData(redrawMap)
-    
-
-
 }
 
 var unloadMap = function() {
+    zoomToCity(map)
     if (map.getLayer("Election District Border")) {
     map.removeLayer("Election District Border")};
     if (map.getLayer("Election District")) {
@@ -63,13 +59,13 @@ var unloadMap = function() {
     map.removeSource("Election District")};
     unloadCSV();
 }
-
-elections = [""]
-const selector = d3.select("select")
-selector.attr("onchange", `unloadMap(); loadMap()`)
+let elections = [""]
+const selector = d3.select("#selector").attr("onchange", `unloadMap(); loadMap();`)
+const dateSelector = d3.select("#date-selector").attr("onchange", `getInventory();`)
 let selectedIndex = 0
 
-const populateSelector = function(choices) {
+const populateSelector = function(choices, selector) {
+    selector.html("")
     elections = choices
     if (elections[0] === ""){elections.shift()}
     for (let i=0; i<choices.length; i++){
@@ -82,36 +78,75 @@ const populateSelector = function(choices) {
     d3.select("h1").text(`Election Results: ${elections[selectedIndex].replace(/_/g," ")}`)
     }
 }
-populateSelector(elections)
+populateSelector(elections, selector)
 
+const dateOptions = []
 const options = []
 let ED = {};
 let EDLastClicked = 0;
 let legend = [];
 let color = {}
+
+const loadInventory = function(response, selector, seriesPath) {
+    selectedIndex = 0 //reset selection of election
+    inventory = response.split('\r\n')
+    inventory.pop() //because the last element is a useless empty str
+    options.length = 0 // clear out old options on inventory refresh
+    for (let i=0; i<inventory.length; i++){
+        item = inventory[i]
+        options.push({geoJSON: "./inventory/"+seriesPath+"geojsons/"+item.replace("_-_","___").replace("'","")+".geojson", data: "./inventory/"+seriesPath+"data/"+item+".csv"})
+    }
+    populateSelector(inventory, selector)
+    jQuery.getJSON(options[selectedIndex].geoJSON).then((responseJSON) => {
+        const features = responseJSON.features;
+        for (let i=0; i < features.length; i++) {
+            let ed = features[i].properties[atomicUnit];
+            ED[ed] = features[i];
+        }
+        })
+    if (this.loadedOnce) {unloadMap(); loadMap()}
+    else {this.loadedOnce = true; loadData()}
+}
+
+
+const getInventory = function() {
+selectedDateIndex = document.getElementById("date-selector").selectedIndex
+seriesPath = dateOptions[selectedDateIndex]+"/"
 $.ajax({
     type: "GET",
-    url: "./inventory.txt",
+    url: "./inventory/"+seriesPath+"inventory.csv",
     dataType: "text",
     success: function(response) {
-        inventory = response.split('\r\n')
-        for (let i=0; i<inventory.length; i++){
-            item = inventory[i]
-            options.push({geoJSON: "./geojsons/"+item+".geojson", data: "./data/"+item+".csv"})
-        }
-        populateSelector(inventory)
-
-        jQuery.getJSON(options[selectedIndex].geoJSON).then((responseJSON) => {
-            const features = responseJSON.features;
-            for (let i=0; i < features.length; i++) {
-                let ed = features[i].properties[atomicUnit];
-                ED[ed] = features[i];
-            }
-            })
-        loadData()
+        loadInventory(response, selector, seriesPath)
         
     }
 })
+}
+
+const loadDateInventory = function(response, selector){
+    inventory = response.split('\r\n')
+    inventory.pop()
+    for (let i=0; i<inventory.length; i++){
+        item = inventory[i]
+        dateOptions.push(item)
+    }
+    populateSelector(inventory, selector)
+}
+
+
+const getDateInventory = function(){
+    $.ajax({
+        type: "GET",
+        url: "./inventory/inventory.csv",
+        dataType: "text",
+        success: function(response){
+            loadDateInventory(response, dateSelector)
+            getInventory()
+        }
+    })
+}
+
+getDateInventory()
 
 
 let data = {};
@@ -153,7 +188,7 @@ function htmlSanitize(str) {
 
 function loadCSV(csv) {
     let rows = csv.split("\n")
-    columns = rows[0].split(",");
+    columns = rows[0].split("\r")[0].split(",");
     candidates_start_i = columns.indexOf("Reporting")+1
     candidates_end_i = columns.indexOf("Total Votes")
     for (let i=0; i<columns.length; i++){
@@ -219,10 +254,11 @@ function loadCSV(csv) {
     //legend packing
     let legendColors
     const crowdedColors = ["#fdb800","#c10032","#006544","#78c7eb","#a9e558","#720091","#ffff00","#df73ff","#a87000","#004da8"]
-    const primaryColors = ["fdb800","#006544","#78c7eb","#720091","#a9e558"]
+    const primaryColors = ["#fdb800","#006544","#78c7eb","#720091","#a9e558"]
+    // primaryColors = ["rgba(0,0,0,0.5)"] //rbga format
     const generalColors = ["#004da8","#c10032"]
     const questionColors = ["#007300","#c10032"]
-    if (candidates.includes("Yes")) {legendColors=questionColors}
+    if (candidates.includes("Yes")) {legendColors=questionColors; candidates = ["Yes","No"]} //force proper order for colors
     else {legendColors=primaryColors
         for (let i=0; i<candidates.length; i++) {
             if (candidates[i].includes("RECAP")){legendColors=generalColors; break}
@@ -231,27 +267,26 @@ function loadCSV(csv) {
     let k = 0
     for (let i=0; (i<legendColors.length);) {
         let candidate = candidates[k]
-        if (candidate === undefined) {break}
+        if (candidate === undefined) {break} //if there are fewer candidates than colors
         let EDs = Object.keys(data)
-        let winningEds = []
+        let symbologySegmentUnits = []
         for (let j=0; j<EDs.length; j++) {
             let ed = EDs[j]
             if (data[ed].winner){
-                if (data[ed].winner.replace(" RECAP","") === candidate.replace(" RECAP","")) { //append .replace(" RECAP","") to both sides of ===
-                        winningEds.push(ed)
+                if (data[ed].winner.split(" RECAP")[0] === candidate.split(" RECAP")[0]) {
+                        symbologySegmentUnits.push(ed)
                 }
             }
         }
-        if (winningEds.length > 1) {
-        legend.push(winningEds)
-        legend.push(legendColors[i])
-        color[candidate] = legendColors[i]
-        k++
-        i++
+        if (symbologySegmentUnits.length > 0) {
+            legend.push(symbologySegmentUnits)
+            legend.push(legendColors[i])
+            //^ push color for symbology definition cluster
+            color[candidate] = legendColors[i]
+            i++
         }
-        else {
-            k++;
-            color[candidate] = "#ffffff"}
+        else {color[candidate] = "#ffffff"}
+        k++
     }
 
     let row = table.append("tr").attr("id", "total-row");
@@ -337,7 +372,8 @@ const zoomToED = function(map, ed) {
 }
 
 const zoomToCity = function(map) {
-    map.fitBounds([[-74.2556845,40.4955504],[-73.7018294,40.9153539]], {padding: 5})
+    map.fitBounds([[-74.2556845,40.4955504],[-73.7018294,40.9153539]], {padding: 5}) //zoom to NYC
+    // map.fitBounds([[-180,-90],[180,90]]) //zoom to the entire world
 }
 
 const updateTable = function() {
@@ -373,9 +409,16 @@ const resetTable = function() {
         d3.select("#total-row").select("#value").text(totalVotes.toLocaleString())
 }
 
+// map.on('moveend', function(){
+//         if (!this.firedOnce && this.firedOnce===undefined){
+//             console.log("move end not move")
+//             this.firedOnce = true
+//             }
+//         }) //okay so some sort of trigger like this needs to be invoked such that the listener event fires only once
+
 map.on('load', function() {
     let clickedED = null
-    zoomToCity(map)
+    // zoomToCity(map)
 
     map.addControl(new mapboxgl.NavigationControl());
 
@@ -402,28 +445,40 @@ map.on('load', function() {
     )
 
     map.on('sourcedata', () => {
-        if (!sourceLoaded) {
+        if (!map.sourceLoaded) {
         if (map.getSource('Election District') && map.isSourceLoaded('Election District')) {
         sourceFeatures = map.querySourceFeatures("Election District")
+        zoomTo(map, sourceFeatures)
         if (sourceFeatures.length > 0) {
         for (let i=0; i<sourceFeatures.length;i++) {
             let state = {};
             let feature = sourceFeatures[i];
-            let EDTotal = 0;
-            for (let j=0; j<candidates.length; j++) {
-                let EDCandidateCount = data[feature.properties[atomicUnit]][candidates[j]]
-                EDTotal += Number(EDCandidateCount)
-            }
-            for (let j=0; j<candidates.length; j++) {
-                let EDCandidateCount = data[feature.properties[atomicUnit]][candidates[j]]
+            // below is only necessary if percentages are not supplied in the data 
+            // let EDTotal = 0;
+            // for (let j=0; j<candidates.length; j++) {
+            //     let EDCandidateCount = data[feature.properties[atomicUnit]][candidates[j]]
+            //     EDTotal += Number(EDCandidateCount)
+            // }
+            // for (let j=0; j<candidates.length; j++) {
+            //     let EDCandidateCount = data[feature.properties[atomicUnit]][candidates[j]]
+            //     let pCandidateName = `p_${candidates[j]}`
+            //     let pCandidateValue = (EDCandidateCount/EDTotal).toFixed(4)
+            //     state[pCandidateName] = pCandidateValue
+            // }
+            // ^ above is only necessary if percentages are not supplied in the data
+            for (let j=0; j<candidates.length; j++){
                 let pCandidateName = `p_${candidates[j]}`
-                let pCandidateValue = (EDCandidateCount/EDTotal).toFixed(4)
-                state[pCandidateName] = pCandidateValue
+                state[pCandidateName] = data[feature.properties[atomicUnit]][pCandidateName]
             }
+            //^EXP
+
             state.winner = data[feature.properties[atomicUnit]].winner
-            map.setFeatureState({source: 'Election District', id: feature.id}, state)
+            state.winner_p = Number(data[feature.properties[atomicUnit]]["winner_p"]).toFixed(4)
+
+            map.setFeatureState({source: 'Election District', id: feature.id}, state) //currently this isn't being used at all!
+
         }
-        sourceLoaded = true
+        map.sourceLoaded = true
         }}
         }}
     )
