@@ -1,126 +1,133 @@
-// document.addEventListener('DOMContentLoaded', () => {
-// let atomicGeoJSONUnit = "ElectDist"
-// let atomicDataUnit = "ED"
-let atomicUnit = "ElectDist"
+let geoJSONUnitColumnName = "ElectDist"
+
+const tenStepOpacity = function(field) {
+    const maxOpacity = 1
+    return(
+    ["case",
+    ["<", ["*",["feature-state", field], ["feature-state", "reporting"]], 0.2],0.2 * maxOpacity,
+    ["<", ["*",["feature-state", field], ["feature-state", "reporting"]], 0.3],0.3 * maxOpacity,
+    ["<", ["*",["feature-state", field], ["feature-state", "reporting"]], 0.4],0.4 * maxOpacity,
+    ["<", ["*",["feature-state", field], ["feature-state", "reporting"]], 0.5],0.5 * maxOpacity,
+    ["<", ["*",["feature-state", field], ["feature-state", "reporting"]], 0.6],0.6 * maxOpacity,
+    ["<", ["*",["feature-state", field], ["feature-state", "reporting"]], 0.7],0.7 * maxOpacity,
+    ["<", ["*",["feature-state", field], ["feature-state", "reporting"]], 0.8],0.8 * maxOpacity,
+    ["<", ["*",["feature-state", field], ["feature-state", "reporting"]], 0.9],0.9 * maxOpacity,
+    // ["<", ["feature-state", field], 0.1],0.1,
+    // ["<", ["feature-state", field], 0.2],0.2,
+    // ["<", ["feature-state", field], 0.3],0.3,
+    // ["<", ["feature-state", field], 0.4],0.4,
+    // ["<", ["feature-state", field], 0.5],0.5,
+    // ["<", ["feature-state", field], 0.6],0.6,
+    // ["<", ["feature-state", field], 0.7],0.7,
+    // ["<", ["feature-state", field], 0.8],0.8,
+    // ["<", ["feature-state", field], 0.9],0.9,
+    1])
+}
+
+const dataLayerBorder = { //const to define behavior of data borders
+    "id": "Data-Layer Border",
+    "type": 'line',
+    "source": 'Data-Layer',
+    "paint": {
+        "line-color": "#000000",
+        "line-width": 2,
+        "line-opacity": ["case",
+        ["boolean", ["feature-state","selected"], false],1,
+        ["boolean", ["feature-state","hover"], false],1,
+        0.25],
+        "line-width": ["case",
+        ["boolean", ["feature-state","selected"], false],5,
+        ["boolean", ["feature-state","hover"], false],2.5,
+        0.5]
+    }
+}
 
 var loadMap = function() {
     selectedIndex = document.getElementById("selector").selectedIndex
-    d3.select("h1").text(`Election Results: ${elections[selectedIndex].replace(/_/g," ")}`)
-    map.sourceLoaded = false
+    d3.select("h3").text(`Election Results: ${dataSeriesChoices[selectedIndex].replace(/_/g," ")}`)
+    // map.sourceLoaded = false
     function redrawMap() {
-        map.addSource('Election District', {
+        map.addSource('Data-Layer', {
             "type": "geojson",
-            "data": options[selectedIndex].geoJSON,
+            "data": {features: map.features, type: "FeatureCollection"}, //GeoJSON format
             'generateId': true
             })
-        map.addLayer({
-            "id": "Election District",
-            "type": 'fill',
-            "source": 'Election District',
-            "paint": {
-                "fill-color": [
-                    'match',
-                    ["get", atomicUnit],
-                    ...legend,
-                    "#ffffff"  
-                ],
-                "fill-opacity": 0.7,
-            }
-        }, "road-label"
-        )
-        map.addLayer({
-            "id": "Election District Border",
-            "type": 'line',
-            "source": 'Election District',
-            "paint": {
-                "line-color": "#000000",
-                "line-width": 2,
-                "line-opacity": ["case",
-                ["boolean", ["feature-state","selected"], false],1,
-                ["boolean", ["feature-state","hover"], false],1,
-                0.25],
-                "line-width": ["case",
-                ["boolean", ["feature-state","selected"], false],5,
-                ["boolean", ["feature-state","hover"], false],2.5,
-                0.5]
-            }
-        }, "road-label")
+        map.addLayer(dataLayer, "road-label")
+        map.addLayer(dataLayerBorder, "road-label")
     }
     loadData(redrawMap)
 }
 
 var unloadMap = function() {
-    zoomToCity(map)
-    if (map.getLayer("Election District Border")) {
-    map.removeLayer("Election District Border")};
-    if (map.getLayer("Election District")) {
-    map.removeLayer("Election District")};
-    if (map.getSource("Election District")) {
-    map.removeSource("Election District")};
+    map.clickedUnit = null
+    map.moveEnd = false
+    resetTable()
+    // zoomToCity(map)
+    if (map.getLayer("Data-Layer Border")) {
+    map.removeLayer("Data-Layer Border")};
+    if (map.getLayer("Data-Layer")) {
+    map.removeLayer("Data-Layer")};
+    if (map.getSource("Data-Layer")) {
+    map.removeSource("Data-Layer")};
     unloadCSV();
 }
-let elections = [""]
+let dataSeriesChoices = [""] //used once in loadMap(), otherwise local to populateSelector()
 const selector = d3.select("#selector").attr("onchange", `unloadMap(); loadMap();`)
 const dateSelector = d3.select("#date-selector").attr("onchange", `getInventory();`)
 let selectedIndex = 0
 
-const populateSelector = function(choices, selector) {
+const populateSelector = function(selectorChoices, selector) {
     selector.html("")
-    elections = choices
-    if (elections[0] === ""){elections.shift()}
-    for (let i=0; i<choices.length; i++){
-        const option = selector.append("option").text(`${choices[i].replace(/_/g," ")}`)
+    dataSeriesChoices = selectorChoices
+    if (dataSeriesChoices[0] === ""){dataSeriesChoices.shift()}
+    if (dataSeriesChoices[dataSeriesChoices.length-1] === ""){dataSeriesChoices.pop()}
+    for (let i=0; i<selectorChoices.length; i++){
+        const option = selector.append("option").text(`${selectorChoices[i].replace(/_/g," ")}`)
         if (i===0) {option.attr("selected","selected")
         }
     }
     let selectedIndex = document.getElementById("selector").selectedIndex
-    if (elections[selectedIndex] !== undefined){
-    d3.select("h1").text(`Election Results: ${elections[selectedIndex].replace(/_/g," ")}`)
+    if (dataSeriesChoices[selectedIndex] !== undefined){
+    d3.select("h3").text(`Election Results: ${dataSeriesChoices[selectedIndex].replace(/_/g," ")}`)
     }
 }
-populateSelector(elections, selector)
+populateSelector(dataSeriesChoices, selector)
 
-const dateOptions = []
-const options = []
-let ED = {};
-let EDLastClicked = 0;
+const dateOptions = [] //set in loadDateInventory, used in getInventory
+const options = [] //reset in loadInventory, set in loadInventory, used in loadData
+// let ED = {}; //set in loadData, used in zoomToUnit
 let legend = [];
-let color = {}
+// let color = {} //only used in loadCSV(), and reset in unloadCSV()
+let dataLayer
+
+
 
 const loadInventory = function(response, selector, seriesPath) {
     selectedIndex = 0 //reset selection of election
     inventory = response.split('\r\n')
-    inventory.pop() //because the last element is a useless empty str
+    if (inventory[inventory.length - 1].length === 0) {inventory.pop()} //because the last element is a useless empty str
     options.length = 0 // clear out old options on inventory refresh
     for (let i=0; i<inventory.length; i++){
         item = inventory[i]
         options.push({geoJSON: "./inventory/"+seriesPath+"geojsons/"+item.replace("_-_","___").replace("'","")+".geojson", data: "./inventory/"+seriesPath+"data/"+item+".csv"})
     }
     populateSelector(inventory, selector)
-    jQuery.getJSON(options[selectedIndex].geoJSON).then((responseJSON) => {
-        const features = responseJSON.features;
-        for (let i=0; i < features.length; i++) {
-            let ed = features[i].properties[atomicUnit];
-            ED[ed] = features[i];
-        }
-        })
     if (this.loadedOnce) {unloadMap(); loadMap()}
     else {this.loadedOnce = true; loadData()}
 }
 
-
 const getInventory = function() {
-selectedDateIndex = document.getElementById("date-selector").selectedIndex
-seriesPath = dateOptions[selectedDateIndex]+"/"
-$.ajax({
-    type: "GET",
-    url: "./inventory/"+seriesPath+"inventory.csv",
-    dataType: "text",
-    success: function(response) {
-        loadInventory(response, selector, seriesPath)
-        
-    }
-})
+    selectedSubchoiceIndex = document.getElementById("date-selector").selectedIndex
+    seriesPath = dateOptions[selectedSubchoiceIndex]+"/"
+    $.ajax({
+        type: "GET",
+        url: "./inventory/"+seriesPath+"inventory.csv",
+        dataType: "text",
+        success: function(response) {
+            loadInventory(response, selector, seriesPath)
+            
+        }
+    })
 }
 
 const loadDateInventory = function(response, selector){
@@ -150,30 +157,32 @@ getDateInventory()
 
 
 let data = {};
-let columns = [];
-let total = {};
-let totalVotes = 0;
-let candidates = [];
-let rank = {};
-let sourceFeatures = []
+let total = {}; //used only in loadCSV() and resetTable(), reset in unloadCSV()
+let totalVotes = 0; //used in loadCSV() and resetTable(), reset in unloadCSV()
+let candidates = []; //used widely
+// let rank = {}; //used only in loadCSV(), reset in unloadCSV()
+let opacityScaleField = "winner_p"
+let rowSelected = false //used for enabling or surpressing symbology change on table row hover
 
 const loadData = function(callback) {
+    delete map.features
     jQuery.getJSON(options[selectedIndex].geoJSON).then((responseJSON) => {
-        const features = responseJSON.features;
-        for (let i=0; i < features.length; i++) {
-            let ed = features[i].properties[atomicUnit];
-            ED[ed] = features[i];
-        }})
+        map.features = responseJSON.features;
+        // for (let i=0; i < map.features.length; i++) {
+            // let ed = map.features[i].properties[geoJSONUnitColumnName];
+            // ED[ed] = features[i];
+        // }
+        map.zoom(map.features)
 
-
-    $.ajax({
-        type: "GET",
-        url: options[selectedIndex].data,
-        dataType: "text",
-        success: function(response) {
-            loadCSV(response)
-            if (callback) {callback()}
-            },
+        $.ajax({
+            type: "GET",
+            url: options[selectedIndex].data,
+            dataType: "text",
+            success: function(response) {
+                loadCSV(response)
+                if (callback) {callback()}
+                },
+        })
     })
 }
 
@@ -187,8 +196,11 @@ function htmlSanitize(str) {
 }
 
 function loadCSV(csv) {
+    d3.select("#total-row").remove();
+    d3.select("#heading-row").remove();
+    d3.selectAll(".candidate-row").remove();
     let rows = csv.split("\n")
-    columns = rows[0].split("\r")[0].split(",");
+    let columns = rows[0].split("\r")[0].split(",");
     candidates_start_i = columns.indexOf("Reporting")+1
     candidates_end_i = columns.indexOf("Total Votes")
     for (let i=0; i<columns.length; i++){
@@ -198,6 +210,7 @@ function loadCSV(csv) {
             break
         }
     }
+    // const total = {}
     for (let i=candidates_start_i; i<candidates_end_i; i++) {
         total[columns[i]] = 0;
     }
@@ -217,6 +230,7 @@ function loadCSV(csv) {
         data[ed] = row;
     }
     let candidateKeys = Object.keys(total)
+    const rank = {}
     for (let i=0; i<candidateKeys.length; i++) {
         rank[total[candidateKeys[i]]] = candidateKeys[i]
     }
@@ -255,59 +269,112 @@ function loadCSV(csv) {
     let legendColors
     const crowdedColors = ["#fdb800","#c10032","#006544","#78c7eb","#a9e558","#720091","#ffff00","#df73ff","#a87000","#004da8"]
     const primaryColors = ["#fdb800","#006544","#78c7eb","#720091","#a9e558"]
-    // primaryColors = ["rgba(0,0,0,0.5)"] //rbga format
-    const generalColors = ["#004da8","#c10032"]
-    const questionColors = ["#007300","#c10032"]
+    const generalColors = ["#004da8","#c10032"] //blue, red
+    const questionColors = ["#007300","#c10032"]//green, red
     if (candidates.includes("Yes")) {legendColors=questionColors; candidates = ["Yes","No"]} //force proper order for colors
     else {legendColors=primaryColors
         for (let i=0; i<candidates.length; i++) {
             if (candidates[i].includes("RECAP")){legendColors=generalColors; break}
         }
     }
+    const color = {}
     let k = 0
+    let unitKeys = Object.keys(data)
     for (let i=0; (i<legendColors.length);) {
         let candidate = candidates[k]
         if (candidate === undefined) {break} //if there are fewer candidates than colors
-        let EDs = Object.keys(data)
+        
         let symbologySegmentUnits = []
-        for (let j=0; j<EDs.length; j++) {
-            let ed = EDs[j]
+        for (let j=0; j<unitKeys.length; j++) {
+            let ed = unitKeys[j]
             if (data[ed].winner){
                 if (data[ed].winner.split(" RECAP")[0] === candidate.split(" RECAP")[0]) {
                         symbologySegmentUnits.push(ed)
+                        break
                 }
             }
         }
         if (symbologySegmentUnits.length > 0) {
-            legend.push(symbologySegmentUnits)
-            legend.push(legendColors[i])
+            // ['==', ['feature-state', 'winner'], "Jose E. Serrano"], "#b4d455", // what a 'case' line looks like
+            // legend.push(symbologySegmentUnits)
+            // legend.push(legendColors[i])
             //^ push color for symbology definition cluster
-            color[candidate] = legendColors[i]
+            legend.push(['==', ['feature-state', 'winner'], candidate])
+            legend.push(legendColors[i])
+            if (typeof legendColors[i] == "string") {seriesColor = legendColors[i]}
+            else {seriesColor = legendColors[i][0]}
+            color[candidate] = seriesColor
             i++
         }
         else {color[candidate] = "#ffffff"}
         k++
     }
-
-    let row = table.append("tr").attr("id", "total-row");
-    row.append("td").attr("id","total-key").text("Total:");
-    let values = row.append("td").attr("id","values")
+    dataLayer = {
+        "id": "Data-Layer",
+        "type": 'fill',
+        "source": 'Data-Layer',
+        "paint": {
+            "fill-color": 
+            [
+            //     'match',
+            //     ["get", geoJSONUnitColumnName],
+            //     ...legend,
+            //     "#ffffff"
+                "case",
+                ...legend, 
+                "#ffffff"
+            ],
+                "fill-opacity": tenStepOpacity(opacityScaleField)
+            // ["boolean", ["feature-state","selected"], false],1,
+            // ["boolean", ["feature-state","hover"], false],1,
+            // 0.25],
+        }
+    }
+    //construct table
+    let totalRow = table.append("tr").attr("id", "total-row");
+    totalRow.append("td").attr("id","total-key").text("Total:");
+    let values = totalRow.append("td").attr("id","values")
     values.append("td").attr("id","value").text(totalVotes.toLocaleString());
 
     const headingRow = table.append("tr").attr("id", "heading-row");
     headingRow.append("td").text("Candidate");
     headingRow.append("td").text("Percent");
     headingRow.append("td").text("Votes");
+    const dataRows = table.append("div").attr("id","data-rows").attr("onmouseleave", 
+            `if (!rowSelected){
+                    map.setPaintProperty('Data-Layer', 'fill-color', [
+                    "case",
+                    ...legend,
+                    "#ffffff"  
+                    ]);
+                    map.setPaintProperty('Data-Layer', 'fill-opacity', tenStepOpacity(opacityScaleField))
+                };`)
     for (let i=0;i<candidates.length;i++) {
         totalVotes += total[candidates[i]]
-        let row = table.append("tr")
-        .attr("onmouseout", `map.setPaintProperty('Election District', 'fill-color', [
-                'match',
-                ["get", atomicUnit],
-                ...legend,
-                "#ffffff"  
-            ])`)
-        .attr("id", htmlSanitize(candidates[i])).attr("class", "candidate-row").style("background", color[candidates[i]] || "white");
+        let row = dataRows.append("tr")
+        .attr("onmouseenter",
+                `        
+                if (!rowSelected){
+                    map.setPaintProperty('Data-Layer', 'fill-color', this.style["background-color"]);
+                    let seriesName = this.id;
+                    map.setPaintProperty('Data-Layer', 'fill-opacity', tenStepOpacity('p_'+seriesName));
+                    };
+                `
+                )
+        .attr("onclick", `{
+            if (this.id !== "selected-row"){
+            let seriesName = this.id;
+            map.setPaintProperty('Data-Layer', 'fill-color', this.style["background-color"]);
+            map.setPaintProperty('Data-Layer', 'fill-opacity', tenStepOpacity('p_'+seriesName));
+            if (rowSelected){d3.select("#selected-row").attr("id", htmlSanitize(d3.select("#selected-row").select("#key").text()))};
+            this.id = "selected-row"
+            this.seriesName = seriesName
+            rowSelected = true
+            }
+            else {this.id = this.seriesName;
+            rowSelected = false};
+        }`)
+        .attr("id", htmlSanitize(candidates[i]).replace(" RECAP","")).attr("class", "candidate-row").style("background", color[candidates[i]] || "white");
         row.append("td").attr("id","key").text(candidates[i].split("(")[0].split(" RECAP")[0]);
         let values = row.append("td").attr("id","values")
         values.append("td").attr("id","percent-to-update").text()
@@ -317,20 +384,18 @@ function loadCSV(csv) {
         d3.select("#percent-to-update").attr("id","percent").text(((total[candidates[i]]/totalVotes)*100).toFixed(2)+"%")
     }
     d3.select("#total-row").select("#value").text(totalVotes.toLocaleString());
-
 }
 
 function unloadCSV() {
-    total = {};
+    rowSelected = false
     data = {};
-    rank = {};
     legend = [];
-    color = {};
     candidates = [];
     totalVotes = 0;
-    d3.select("#total-row").remove();
-    d3.select("#heading-row").remove();
-    d3.selectAll(".candidate-row").remove();
+    d3.selectAll("#total-row").remove();
+    d3.selectAll("#heading-row").remove();
+    // d3.selectAll(".candidate-row").remove();
+    d3.selectAll("#data-rows").remove()
 
 }
 
@@ -339,13 +404,15 @@ mapboxgl.accessToken = 'pk.eyJ1Ijoic2FtaHVkaXMiLCJhIjoiY2pudzdwZTIyMDA2dTN2bWVtY
 const map = new mapboxgl.Map({
 container: 'map',
 style: 'mapbox://styles/samhudis/cjuefwyqu1o5j1fnrju4ywcgq',
-center: [-73.97875695,40.70545215],
-zoom: 9
+center: [-73.97875695,40.70545215], //nyc
+zoom: 9, //nyc
+// center: [0,0], // world
+// zoom: 1, // world
 });
 let hoveredId = null;
 let currentED = null;
 
-const zoomTo = function(map, featureArr) {
+map.zoom = function(featureArr=map.sourceFeatures) {
     let n = -100;
     let s = 100;
     let e = 200;
@@ -366,9 +433,10 @@ const zoomTo = function(map, featureArr) {
     map.fitBounds([[w,s],[e,n]], {padding: 25, linear: false})
 }
 
-const zoomToED = function(map, ed) {
-    let features = [ED[ed]]
-    zoomTo(map, features)
+const zoomToUnit = function(map, unit) {
+    // let features = [ED[unit]]
+    let features = [map.features[unit]]
+    map.zoom(features)
 }
 
 const zoomToCity = function(map) {
@@ -409,141 +477,107 @@ const resetTable = function() {
         d3.select("#total-row").select("#value").text(totalVotes.toLocaleString())
 }
 
-// map.on('moveend', function(){
-//         if (!this.firedOnce && this.firedOnce===undefined){
-//             console.log("move end not move")
-//             this.firedOnce = true
-//             }
-//         }) //okay so some sort of trigger like this needs to be invoked such that the listener event fires only once
-
 map.on('load', function() {
-    let clickedED = null
-    // zoomToCity(map)
+    map.clickedUnit = null
 
     map.addControl(new mapboxgl.NavigationControl());
 
-    map.addSource('Election District', {
+    map.addSource('Data-Layer', {
     "type": "geojson",
-    "data": options[selectedIndex].geoJSON,
+    "data": {features: map.features, type: "FeatureCollection"}, //GeoJSON format
     'generateId': true
     })
+    map.addLayer(dataLayer, "road-label")
 
-    map.addLayer({
-        "id": "Election District",
-        "type": 'fill',
-        "source": 'Election District',
-        "paint": {
-            "fill-color": [
-                'match',
-                ["get", atomicUnit],
-                ...legend,
-                "#ffffff"  
-            ],
-            "fill-opacity": 0.7,
-        }
-    }, "road-label"
-    )
+    map.zoom(map.features)
 
     map.on('sourcedata', () => {
-        if (!map.sourceLoaded) {
-        if (map.getSource('Election District') && map.isSourceLoaded('Election District')) {
-        sourceFeatures = map.querySourceFeatures("Election District")
-        zoomTo(map, sourceFeatures)
-        if (sourceFeatures.length > 0) {
-        for (let i=0; i<sourceFeatures.length;i++) {
-            let state = {};
-            let feature = sourceFeatures[i];
-            // below is only necessary if percentages are not supplied in the data 
-            // let EDTotal = 0;
-            // for (let j=0; j<candidates.length; j++) {
-            //     let EDCandidateCount = data[feature.properties[atomicUnit]][candidates[j]]
-            //     EDTotal += Number(EDCandidateCount)
-            // }
-            // for (let j=0; j<candidates.length; j++) {
-            //     let EDCandidateCount = data[feature.properties[atomicUnit]][candidates[j]]
-            //     let pCandidateName = `p_${candidates[j]}`
-            //     let pCandidateValue = (EDCandidateCount/EDTotal).toFixed(4)
-            //     state[pCandidateName] = pCandidateValue
-            // }
-            // ^ above is only necessary if percentages are not supplied in the data
-            for (let j=0; j<candidates.length; j++){
-                let pCandidateName = `p_${candidates[j]}`
-                state[pCandidateName] = data[feature.properties[atomicUnit]][pCandidateName]
+        // if (!map.sourceLoaded) {
+            if (map.getSource('Data-Layer') && map.isSourceLoaded('Data-Layer')) {
+                map.sourceFeatures = map.querySourceFeatures("Data-Layer")
+                if (map.sourceFeatures.length > 0) {
+                    // if (map.features) {
+                    for (let i=0; i<map.sourceFeatures.length;i++) {
+                        let state = {};
+                        let sourceFeature = map.sourceFeatures[i];
+                        // below is only necessary if percentages are not supplied in the data 
+                        // let EDTotal = 0;
+                        // for (let j=0; j<candidates.length; j++) {
+                        //     let EDCandidateCount = data[sourceFeature.properties[geoJSONUnitColumnName]][candidates[j]]
+                        //     EDTotal += Number(EDCandidateCount)
+                        // }
+                        // for (let j=0; j<candidates.length; j++) {
+                        //     let EDCandidateCount = data[sourceFeature.properties[geoJSONUnitColumnName]][candidates[j]]
+                        //     let pCandidateName = `p_${candidates[j]}`
+                        //     let pCandidateValue = (EDCandidateCount/EDTotal).toFixed(4)
+                        //     state[pCandidateName] = pCandidateValue
+                        // }
+                        // ^ above is only necessary if percentages are not supplied in the data
+                        for (let j=0; j<candidates.length; j++){
+                            let pCandidateName = `p_${candidates[j]}`
+
+                            state[htmlSanitize(pCandidateName).replace(" RECAP","")] = Number(data[sourceFeature.properties[geoJSONUnitColumnName]][pCandidateName])
+                            }
+                        
+                        state.reporting = Number(data[sourceFeature.properties[geoJSONUnitColumnName]].Reporting)/100
+                        state.winner = data[sourceFeature.properties[geoJSONUnitColumnName]].winner
+                        // state.winner_p = Number(data[sourceFeature.properties[geoJSONUnitColumnName]]["winner_p"]).toFixed(4)
+                        state.winner_p = Number(data[sourceFeature.properties[geoJSONUnitColumnName]].winner_p)
+
+                        map.setFeatureState({source: 'Data-Layer', id: sourceFeature.id}, state)
+                        }
+                    // map.sourceLoaded = true
+                // }
             }
-            //^EXP
-
-            state.winner = data[feature.properties[atomicUnit]].winner
-            state.winner_p = Number(data[feature.properties[atomicUnit]]["winner_p"]).toFixed(4)
-
-            map.setFeatureState({source: 'Election District', id: feature.id}, state) //currently this isn't being used at all!
-
         }
-        map.sourceLoaded = true
-        }}
-        }}
-    )
+    })
 
-    map.addLayer({
-        "id": "Election District Border",
-        "type": 'line',
-        "source": 'Election District',
-        "paint": {
-            "line-color": "#000000",
-            "line-width": 2,
-            "line-opacity": ["case",
-            ["boolean", ["feature-state","selected"], false],1,
-            ["boolean", ["feature-state","hover"], false],1,
-            0.25],
-            "line-width": ["case",
-            ["boolean", ["feature-state","selected"], false],5,
-            ["boolean", ["feature-state","hover"], false],2.5,
-            0.5]
-        }
-    }, "road-label")
+    map.addLayer(dataLayerBorder, "road-label")
     
-    map.on("mousemove", "Election District", function(e) {
+    map.on("mousemove", "Data-Layer", function(e) {
         map.getCanvas().style.cursor = 'pointer';
         if (e.features.length > 0) {
             if (hoveredId || hoveredId === 0) {
-                map.setFeatureState({source: 'Election District', id: hoveredId}, {hover: false})
+                map.setFeatureState({source: 'Data-Layer', id: hoveredId}, {hover: false})
             }
             hoveredId = e.features[0].id;
-            currentED = e.features[0].properties[atomicUnit];
-            if (clickedED === null || clickedED.properties[atomicUnit] === e.features[0].properties[atomicUnit]) {
+            currentED = e.features[0].properties[geoJSONUnitColumnName];
+            if (map.clickedUnit === null || map.clickedUnit.properties[geoJSONUnitColumnName] === e.features[0].properties[geoJSONUnitColumnName]) {
                 updateTable()
-            map.setFeatureState({source: 'Election District', id: hoveredId}, { hover: true});
+            map.setFeatureState({source: 'Data-Layer', id: hoveredId}, { hover: true});
             }
         }
     })
 
-    map.on("mouseleave", "Election District", function() {
+    map.on("mouseleave", "Data-Layer", function() {
         map.getCanvas().style.cursor = '';
         if (hoveredId || hoveredId === 0) {
-            map.setFeatureState({source: 'Election District', id: hoveredId}, { hover: false});
+            map.setFeatureState({source: 'Data-Layer', id: hoveredId}, { hover: false});
         }
         hoveredId = null;
         currentED = null;
-        if (clickedED === null) {
+        if (map.clickedUnit === null) {
             resetTable()
         }
     })
 
-    map.on('click', 'Election District', function (e) {
-        clickedED = e.features[0]
-        if (EDLastClicked) {
-            map.setFeatureState({source: 'Election District', id: EDLastClicked.id}, {selected: false})
+    map.on('click', 'Data-Layer', function (e) {
+        map.clickedUnit = e.features[0]
+        if (map.unitLastClicked) {
+            map.setFeatureState({source: 'Data-Layer', id: map.unitLastClicked.id}, {selected: false})
             }
-        if (EDLastClicked && (clickedED.id === EDLastClicked.id)) {
-            EDLastClicked = null;
-            clickedED = null;
-            zoomTo(map, sourceFeatures)
+        if (map.unitLastClicked && (map.clickedUnit.id === map.unitLastClicked.id)) {
+            map.unitLastClicked = null;
+            map.clickedUnit = null;
+            map.zoom(map.features)
         }
         else {
-        EDLastClicked = clickedED;
-        map.setFeatureState({source: 'Election District', id: clickedED.id}, {selected: true})
-        zoomToED(map, clickedED.properties[atomicUnit]);
+        map.unitLastClicked = map.clickedUnit;
+        map.setFeatureState({source: 'Data-Layer', id: map.clickedUnit.id}, {selected: true})
+        // zoomToUnit(map, map.clickedUnit.properties[geoJSONUnitColumnName]);
+        zoomToUnit(map, map.clickedUnit.id)
         updateTable()
         }
-        map.setFeatureState({source: 'Election District', id: hoveredId}, { hover: true});
+        map.setFeatureState({source: 'Data-Layer', id: hoveredId}, { hover: true});
         });
 })
