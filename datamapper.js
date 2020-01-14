@@ -109,7 +109,7 @@ const loadInventory = function(response, selector, seriesPath) {
     options.length = 0 // clear out old options on inventory refresh
     for (let i=0; i<inventory.length; i++){
         item = inventory[i]
-        options.push({geoJSON: "./inventory/"+seriesPath+"geojsons/"+item.replace("_-_","___").replace("'","")+".geojson", data: "./inventory/"+seriesPath+"data/"+item+".csv"})
+        options.push({geoJSON: "./inventory/"+seriesPath+"geojsons/"+item.replace(/_-_/g,"___").replace("'","")+".geojson", data: "./inventory/"+seriesPath+"data/"+item+".csv"})
     }
     populateSelector(inventory, selector)
     if (this.loadedOnce) {unloadMap(); loadMap()}
